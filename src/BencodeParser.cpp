@@ -35,7 +35,14 @@ Value parseInt(const std::string_view& data) {
         throw std::invalid_argument("Invalid integer bencode");
     }
     std::string intStr = std::string(data.substr(1, endPos - 1));
-    return std::stoll(intStr);
+
+    size_t pos = 0;
+    long long num = std::stoll(intStr, &pos);
+    if (pos != intStr.size()) {
+        throw std::invalid_argument("Invalid integer bencode");
+    }
+
+    return num;
 }
 
 Value parseString(const std::string_view& data) {

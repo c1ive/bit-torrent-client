@@ -23,6 +23,12 @@ TEST_CASE("Parse integer 3") {
     REQUIRE(std::get<int64_t>(value) == 0);
 }
 
+TEST_CASE("Parse integer 4") {
+    auto value = bencode::parse("i12093810981093e");
+    REQUIRE(std::holds_alternative<int64_t>(value));
+    REQUIRE(std::get<int64_t>(value) == 12093810981093);
+}
+
 TEST_CASE("Parse integer overflow") {
     REQUIRE_THROWS_AS(bencode::parse("i9223372036854775808e"), std::out_of_range);
 }
