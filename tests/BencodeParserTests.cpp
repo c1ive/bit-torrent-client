@@ -90,8 +90,60 @@ TEST_CASE("Parse integer missing digits after minus") {
     REQUIRE_THROWS_AS(bencode::parse("i-e"), std::invalid_argument);
 }
 
-TEST_CASE("Parse string") {
+TEST_CASE("Parse string 1") {
     auto value = bencode::parse("4:spam");
     REQUIRE(std::holds_alternative<std::string>(value));
     REQUIRE(std::get<std::string>(value) == "spam");
+}
+
+TEST_CASE("Parse string 2") {
+    auto value = bencode::parse("3:abc");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value) == "abc");
+}
+
+TEST_CASE("Parse very long string") {
+    std::string longStr(10000, 'a');
+    std::string bencoded = std::to_string(longStr.size()) + ":" + longStr;
+    auto value = bencode::parse(bencoded);
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value) == longStr);
+}
+
+TEST_CASE("Parse empty string") {
+    auto value = bencode::parse("0:");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value).empty());
+}
+
+TEST_CASE("Parse string with colon content") {
+    auto value = bencode::parse("7:foo:bar");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value) == "foo:bar");
+}
+
+TEST_CASE("Parse string with multi-digit length") {
+    auto value = bencode::parse("11:hello world");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value) == "hello world");
+}
+
+TEST_CASE("Parse string missing colon") {
+    REQUIRE_THROWS_AS(bencode::parse("4spam"), std::invalid_argument);
+}
+
+TEST_CASE("Parse string length exceeds data") {
+    REQUIRE_THROWS_AS(bencode::parse("5:spam"), std::invalid_argument);
+}
+
+TEST_CASE("Parse string non-digit length") {
+    REQUIRE_THROWS_AS(bencode::parse("x:spam"), std::invalid_argument);
+}
+
+TEST_CASE("Parse string negative length") {
+    REQUIRE_THROWS_AS(bencode::parse("-1:spam"), std::invalid_argument);
+}
+
+TEST_CASE("Parse string empty length") {
+    REQUIRE_THROWS_AS(bencode::parse(":spam"), std::invalid_argument);
 }
