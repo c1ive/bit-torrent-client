@@ -1,19 +1,19 @@
-#include <regex>
 #include <stdexcept>
 
 #include "BencodeParser.hpp"
 
 namespace bt::bencode {
+Value parse(std::string_view data) {
+    size_t pos = 0;
+    return detail::parse(data, pos);
+}
+
+namespace detail {
 constexpr char INT_START = 'i';
 constexpr char LIST_START = 'l';
 constexpr char DICT_START = 'd';
 constexpr char END = 'e';
 constexpr char COLON = ':';
-
-Value parse(std::string_view data) {
-    size_t pos = 0;
-    return parse(data, pos);
-}
 
 Value parse(std::string_view data, size_t& pos) {
     if (data.empty()) {
@@ -142,4 +142,5 @@ void _expectChar(std::string_view data, size_t& pos, char expected) {
     }
     pos++;
 }
+} // namespace detail
 } // namespace bt::bencode

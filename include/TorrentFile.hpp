@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "BencodeParser.hpp"
+
 namespace bt {
 /**
  * @brief Metadata representation of a parsed .torrent file.
