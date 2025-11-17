@@ -129,6 +129,38 @@ TEST_CASE("Parse string with colon content") {
     REQUIRE(std::get<std::string>(value) == "foo:bar");
 }
 
+TEST_CASE("Parse string with zero length") {
+    auto value = bencode::parse("0:");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value).empty());
+}
+
+TEST_CASE("Parse string with digits") {
+    auto value = bencode::parse("3:123");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value) == "123");
+}
+
+TEST_CASE("Parse string with special characters") {
+    auto value = bencode::parse("5:!@#$%");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value) == "!@#$%");
+}
+
+TEST_CASE("Parse string with escape sequences") {
+    auto value = bencode::parse("6:\\n\\t\\r");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value) == "\\n\\t\\r");
+}
+
+TEST_CASE("Parse string with null byte") {
+    std::string strWithNull = std::string("abc", 3) + '\0' + std::string("def", 3);
+    std::string bencoded = "7:" + strWithNull;
+    auto value = bencode::parse(bencoded);
+    REQUIRE(std::holds_alternative<std::string>(value));
+    REQUIRE(std::get<std::string>(value) == strWithNull);
+}
+
 TEST_CASE("Parse string with multi-digit length") {
     auto value = bencode::parse("11:hello world");
     REQUIRE(std::holds_alternative<std::string>(value));
