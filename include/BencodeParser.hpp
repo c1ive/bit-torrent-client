@@ -19,17 +19,14 @@ struct Dict {
     std::vector<std::pair<std::string, Value>> items;
 };
 
-struct ParseResult {
-    Value value;
-    size_t consumed; // number of characters used from start
-};
 
-ParseResult parse(const std::string& data);
+Value parse(const std::string& data);
+Value parse(const std::string& data, size_t& pos);
 
-ParseResult parseInt(const std::string& data);
-ParseResult parseString(const std::string& data);
-ParseResult parseList(const std::string& data, size_t startPos = 0);
-ParseResult parseDict(const std::string& data, size_t startPos = 0);
+Value parseInt(const std::string& data, size_t& pos);
+Value parseString(const std::string& data, size_t& pos);
+Value parseList(const std::string& data, size_t& pos);
+Value parseDict(const std::string& data, size_t& pos);
 
 // Helper function to update position after parsing a value
 // void _updatePosition(const Value& value, size_t& pos, const std::string& data);
