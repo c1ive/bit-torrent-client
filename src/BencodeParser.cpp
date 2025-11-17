@@ -10,12 +10,12 @@ constexpr char DICT_START = 'd';
 constexpr char END = 'e';
 constexpr char COLON = ':';
 
-Value parse(const std::string& data) {
+Value parse(std::string_view data) {
     size_t pos = 0;
     return parse(data, pos);
 }
 
-Value parse(const std::string& data, size_t& pos) {
+Value parse(std::string_view data, size_t& pos) {
     if (data.empty()) {
         throw std::invalid_argument("Empty data");
     }
@@ -34,7 +34,7 @@ Value parse(const std::string& data, size_t& pos) {
     }
 }
 
-Value parseInt(const std::string& data, size_t& pos) {
+Value parseInt(std::string_view data, size_t& pos) {
     if (data[pos] != 'i') {
         throw std::invalid_argument("Expected int");
     }
@@ -45,7 +45,7 @@ Value parseInt(const std::string& data, size_t& pos) {
     if (end == std::string::npos) {
         throw std::invalid_argument("Bad int");
     }
-    std::string num = data.substr(pos, end - pos);
+    std::string num(data.substr(pos, end - pos));
     if (!_isValidBencodeInt(num)) {
         throw std::invalid_argument("Bad int");
     }
@@ -53,28 +53,28 @@ Value parseInt(const std::string& data, size_t& pos) {
     return std::stoll(num);
 }
 
-Value parseString(const std::string& data, size_t& pos) {
+Value parseString(std::string_view data, size_t& pos) {
     size_t start = pos;
 
     size_t colon = data.find(':', pos);
     if (colon == std::string::npos)
         throw std::invalid_argument("Bad string");
 
-    std::string lenStr = data.substr(pos, colon - pos);
+    std::string lenStr(data.substr(pos, colon - pos));
     size_t len = std::stoul(lenStr);
 
     pos = colon + 1;
     if (pos + len > data.size())
         throw std::invalid_argument("OOB");
 
-    std::string value = data.substr(pos, len);
+    std::string value(data.substr(pos, len));
     pos += len;
 
     return value;
 }
 
 template <typename Container, typename CreateItem>
-Value parseContainer(const std::string& data, size_t& pos, CreateItem createItem) {
+Value parseContainer(std::string_view data, size_t& pos, CreateItem createItem) {
     Container container;
     _expectChar(data, pos, Container::id);
 
@@ -88,14 +88,14 @@ Value parseContainer(const std::string& data, size_t& pos, CreateItem createItem
 }
 
 // Implementation for list
-Value parseList(const std::string& data, size_t& pos) {
+Value parseList(std::string_view data, size_t& pos) {
     return parseContainer<List>(
-        data, pos, [](const std::string& data, size_t& pos) { return parse(data, pos); });
+        data, pos, [](std::string_view data, size_t& pos) { return parse(data, pos); });
 }
 
 // Implementation for dict
-Value parseDict(const std::string& data, size_t& pos) {
-    return parseContainer<Dict>(data, pos, [](const std::string& data, size_t& pos) {
+Value parseDict(std::string_view data, size_t& pos) {
+    return parseContainer<Dict>(data, pos, [](std::string_view data, size_t& pos) {
         Value keyVal = parseString(data, pos);
         if (!std::holds_alternative<std::string>(keyVal))
             throw std::invalid_argument("Dict key must be string");
@@ -105,7 +105,7 @@ Value parseDict(const std::string& data, size_t& pos) {
     });
 }
 
-bool _isValidBencodeInt(const std::string& s) {
+bool _isValidBencodeInt(std::string_view s) {
     // Empty string is not a valid integer
     if (s.empty())
         return false;
@@ -136,7 +136,7 @@ bool _isValidBencodeInt(const std::string& s) {
     return true;
 }
 
-void _expectChar(const std::string& data, size_t& pos, char expected) {
+void _expectChar(std::string_view data, size_t& pos, char expected) {
     if (pos >= data.size() || data[pos] != expected) {
         throw std::invalid_argument(std::string("Expected '") + expected + "'");
     }

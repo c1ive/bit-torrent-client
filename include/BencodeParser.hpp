@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -22,17 +23,17 @@ struct Dict {
 };
 
 template <typename Container, typename CreateItem>
-Value parseContainer(const std::string& data, size_t& pos, CreateItem createItem);
+Value parseContainer(std::string_view data, size_t& pos, CreateItem createItem);
 
-Value parse(const std::string& data);
-Value parse(const std::string& data, size_t& pos);
+Value parse(std::string_view data);
+Value parse(std::string_view data, size_t& pos);
 
-Value parseInt(const std::string& data, size_t& pos);
-Value parseString(const std::string& data, size_t& pos);
-Value parseList(const std::string& data, size_t& pos);
-Value parseDict(const std::string& data, size_t& pos);
+Value parseInt(std::string_view data, size_t& pos);
+Value parseString(std::string_view data, size_t& pos);
+Value parseList(std::string_view data, size_t& pos);
+Value parseDict(std::string_view data, size_t& pos);
 
 // Helper function to update position after parsing a value
-bool _isValidBencodeInt(const std::string& s);
-void _expectChar(const std::string& data, size_t& pos, char expected);
+bool _isValidBencodeInt(std::string_view s);
+void _expectChar(std::string_view data, size_t& pos, char expected);
 } // namespace bt::bencode
