@@ -73,54 +73,73 @@ Value parseString(const std::string& data, size_t& pos) {
     return value;
 }
 
-Value parseDict(const std::string& data, size_t& pos) {
-    if (data[pos] != 'd') {
-        throw std::invalid_argument("Expected dict");
-    }
-
-    pos++; // skip 'd'
-    Dict dict;
+template <typename Container, typename CreateItem>
+Value parseContainer(const std::string& data, size_t& pos, CreateItem createItem) {
+    Container container;
+    _expectChar(data, pos, Container::id);
 
     while (pos < data.size() && data[pos] != END) {
-        Value keyVal = parseString(data, pos);
-        if (!std::holds_alternative<std::string>(keyVal)) {
-            throw std::invalid_argument("Dictionary keys must be strings");
-        }
-        std::string key = std::get<std::string>(keyVal);
-
-        Value value = parse(data, pos);
-        dict.items.emplace_back(key, value);
+        auto item = createItem(data, pos);
+        container.values.push_back(item);
     }
 
-    if (pos >= data.size() || data[pos] != END) {
-        throw std::invalid_argument("Unterminated dict");
-    }
-    pos++; // skip 'e'
-    return dict;
+    _expectChar(data, pos, END);
+    return container;
 }
 
+// Implementation for list
 Value parseList(const std::string& data, size_t& pos) {
-    if (data[pos] != LIST_START) {
-        throw std::invalid_argument("Expected list");
-    }
+    return parseContainer<List>(
+        data, pos, [](const std::string& data, size_t& pos) { return parse(data, pos); });
+}
 
-    pos++; // skip 'l'
-    List list;
-
-    while (pos < data.size() && data[pos] != END) {
-        Value res = parse(data, pos);
-        list.values.push_back(res);
-    }
-
-    if (pos >= data.size() || data[pos] != END) {
-        throw std::invalid_argument("Unterminated list");
-    }
-    pos++;       // skip 'e'
-    return list;
+// Implementation for dict
+Value parseDict(const std::string& data, size_t& pos) {
+    return parseContainer<Dict>(data, pos, [](const std::string& data, size_t& pos) {
+        Value keyVal = parseString(data, pos);
+        if (!std::holds_alternative<std::string>(keyVal))
+            throw std::invalid_argument("Dict key must be string");
+        std::string key = std::get<std::string>(keyVal);
+        Value val = parse(data, pos);
+        return std::make_pair(key, val);
+    });
 }
 
 bool _isValidBencodeInt(const std::string& s) {
-    static const std::regex re("^(0|-[1-9][0-9]*|[1-9][0-9]*)$");
-    return std::regex_match(s, re);
+    // Empty string is not a valid integer
+    if (s.empty())
+        return false;
+
+    size_t i = 0; // Index of the first character to check
+
+    // Handle optional negative sign
+    if (s[0] == '-') {
+        // "-" alone is invalid
+        if (s.size() == 1)
+            return false;
+        // "-0" is invalid in bencode
+        if (s[1] == '0')
+            return false;
+        i = 1; // Start checking digits after the minus sign
+    }
+
+    // Leading zero is not allowed for positive numbers, e.g., "012" is invalid
+    if (s[i] == '0' && s.size() > i + 1)
+        return false;
+
+    // Check that all remaining characters are digits
+    for (; i < s.size(); ++i)
+        if (!isdigit(s[i]))
+            return false;
+
+    // Passed all checks, this is a valid bencode integer
+    return true;
+}
+
+void _expectChar(const std::string& data, size_t& pos, char expected) {
+    if (pos >= data.size() || data[pos] != expected) {
+        throw std::invalid_argument(std::string("Expected '") + expected + "'");
+    }
+    pos++;
 }
 } // namespace bt::bencode

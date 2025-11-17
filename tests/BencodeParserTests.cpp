@@ -214,9 +214,9 @@ TEST_CASE("Parse list containing dict") {
     const auto& list = std::get<bencode::List>(value);
     REQUIRE(list.values.size() == 1);
     const auto& dict = std::get<bencode::Dict>(list.values[0]);
-    REQUIRE(dict.items.size() == 1);
-    REQUIRE(dict.items[0].first == "key");
-    REQUIRE(std::get<std::string>(dict.items[0].second) == "value");
+    REQUIRE(dict.values.size() == 1);
+    REQUIRE(dict.values[0].first == "key");
+    REQUIRE(std::get<std::string>(dict.values[0].second) == "value");
 }
 
 TEST_CASE("Parse list missing terminator") {
@@ -234,64 +234,64 @@ TEST_CASE("Parse simple dict") {
     auto value = bencode::parse("d3:bar4:spam3:fooi42ee");
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
-    REQUIRE(dict.items.size() == 2);
-    REQUIRE(dict.items[0].first == "bar");
-    REQUIRE(std::get<std::string>(dict.items[0].second) == "spam");
-    REQUIRE(dict.items[1].first == "foo");
-    REQUIRE(std::get<int64_t>(dict.items[1].second) == 42);
+    REQUIRE(dict.values.size() == 2);
+    REQUIRE(dict.values[0].first == "bar");
+    REQUIRE(std::get<std::string>(dict.values[0].second) == "spam");
+    REQUIRE(dict.values[1].first == "foo");
+    REQUIRE(std::get<int64_t>(dict.values[1].second) == 42);
 }
 
 TEST_CASE("Parse empty dict") {
     auto value = bencode::parse("de");
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
-    REQUIRE(dict.items.empty());
+    REQUIRE(dict.values.empty());
 }
 
 TEST_CASE("Parse dict with nested list") {
     auto value = bencode::parse("d4:listli1ei2ee5:other4:donee");
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
-    REQUIRE(dict.items.size() == 2);
-    REQUIRE(dict.items[0].first == "list");
-    const auto& list = std::get<bencode::List>(dict.items[0].second);
+    REQUIRE(dict.values.size() == 2);
+    REQUIRE(dict.values[0].first == "list");
+    const auto& list = std::get<bencode::List>(dict.values[0].second);
     REQUIRE(list.values.size() == 2);
     REQUIRE(std::get<int64_t>(list.values[0]) == 1);
     REQUIRE(std::get<int64_t>(list.values[1]) == 2);
-    REQUIRE(dict.items[1].first == "other");
-    REQUIRE(std::get<std::string>(dict.items[1].second) == "done");
+    REQUIRE(dict.values[1].first == "other");
+    REQUIRE(std::get<std::string>(dict.values[1].second) == "done");
 }
 
 TEST_CASE("Parse dict with nested dict") {
     auto value = bencode::parse("d4:infod3:bar3:fooe4:name4:teste");
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
-    REQUIRE(dict.items.size() == 2);
-    REQUIRE(dict.items[0].first == "info");
-    const auto& inner = std::get<bencode::Dict>(dict.items[0].second);
-    REQUIRE(inner.items.size() == 1);
-    REQUIRE(inner.items[0].first == "bar");
-    REQUIRE(std::get<std::string>(inner.items[0].second) == "foo");
-    REQUIRE(dict.items[1].first == "name");
-    REQUIRE(std::get<std::string>(dict.items[1].second) == "test");
+    REQUIRE(dict.values.size() == 2);
+    REQUIRE(dict.values[0].first == "info");
+    const auto& inner = std::get<bencode::Dict>(dict.values[0].second);
+    REQUIRE(inner.values.size() == 1);
+    REQUIRE(inner.values[0].first == "bar");
+    REQUIRE(std::get<std::string>(inner.values[0].second) == "foo");
+    REQUIRE(dict.values[1].first == "name");
+    REQUIRE(std::get<std::string>(dict.values[1].second) == "test");
 }
 
 TEST_CASE("Parse dict with list of dicts") {
     auto value = bencode::parse("d4:datald3:key5:valueed3:numi1eeee");
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
-    REQUIRE(dict.items.size() == 1);
-    REQUIRE(dict.items[0].first == "data");
-    const auto& list = std::get<bencode::List>(dict.items[0].second);
+    REQUIRE(dict.values.size() == 1);
+    REQUIRE(dict.values[0].first == "data");
+    const auto& list = std::get<bencode::List>(dict.values[0].second);
     REQUIRE(list.values.size() == 2);
     const auto& firstEntry = std::get<bencode::Dict>(list.values[0]);
-    REQUIRE(firstEntry.items.size() == 1);
-    REQUIRE(firstEntry.items[0].first == "key");
-    REQUIRE(std::get<std::string>(firstEntry.items[0].second) == "value");
+    REQUIRE(firstEntry.values.size() == 1);
+    REQUIRE(firstEntry.values[0].first == "key");
+    REQUIRE(std::get<std::string>(firstEntry.values[0].second) == "value");
     const auto& secondEntry = std::get<bencode::Dict>(list.values[1]);
-    REQUIRE(secondEntry.items.size() == 1);
-    REQUIRE(secondEntry.items[0].first == "num");
-    REQUIRE(std::get<int64_t>(secondEntry.items[0].second) == 1);
+    REQUIRE(secondEntry.values.size() == 1);
+    REQUIRE(secondEntry.values[0].first == "num");
+    REQUIRE(std::get<int64_t>(secondEntry.values[0].second) == 1);
 }
 
 /*
@@ -314,19 +314,19 @@ TEST_CASE("Parse dict with nested list chain") {
     auto value = bencode::parse("d4:rootld5:childli1ei2eeee4:meta2:oke");
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
-    REQUIRE(dict.items.size() == 2);
-    REQUIRE(dict.items[0].first == "root");
-    const auto& outerList = std::get<bencode::List>(dict.items[0].second);
+    REQUIRE(dict.values.size() == 2);
+    REQUIRE(dict.values[0].first == "root");
+    const auto& outerList = std::get<bencode::List>(dict.values[0].second);
     REQUIRE(outerList.values.size() == 1);
     const auto& innerDict = std::get<bencode::Dict>(outerList.values[0]);
-    REQUIRE(innerDict.items.size() == 1);
-    REQUIRE(innerDict.items[0].first == "child");
-    const auto& innerList = std::get<bencode::List>(innerDict.items[0].second);
+    REQUIRE(innerDict.values.size() == 1);
+    REQUIRE(innerDict.values[0].first == "child");
+    const auto& innerList = std::get<bencode::List>(innerDict.values[0].second);
     REQUIRE(innerList.values.size() == 2);
     REQUIRE(std::get<int64_t>(innerList.values[0]) == 1);
     REQUIRE(std::get<int64_t>(innerList.values[1]) == 2);
-    REQUIRE(dict.items[1].first == "meta");
-    REQUIRE(std::get<std::string>(dict.items[1].second) == "ok");
+    REQUIRE(dict.values[1].first == "meta");
+    REQUIRE(std::get<std::string>(dict.values[1].second) == "ok");
 }
 
 TEST_CASE("Parse dict missing terminator") {

@@ -12,13 +12,17 @@ struct Dict;
 using Value = std::variant<int64_t, std::string, List, Dict>;
 
 struct List {
+    const static char id = 'l';
     std::vector<Value> values;
 };
 
 struct Dict {
-    std::vector<std::pair<std::string, Value>> items;
+    const static char id = 'd';
+    std::vector<std::pair<std::string, Value>> values;
 };
 
+template <typename Container, typename CreateItem>
+Value parseContainer(const std::string& data, size_t& pos, CreateItem createItem);
 
 Value parse(const std::string& data);
 Value parse(const std::string& data, size_t& pos);
@@ -29,6 +33,6 @@ Value parseList(const std::string& data, size_t& pos);
 Value parseDict(const std::string& data, size_t& pos);
 
 // Helper function to update position after parsing a value
-// void _updatePosition(const Value& value, size_t& pos, const std::string& data);
 bool _isValidBencodeInt(const std::string& s);
+void _expectChar(const std::string& data, size_t& pos, char expected);
 } // namespace bt::bencode
