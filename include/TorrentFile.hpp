@@ -48,12 +48,22 @@ namespace bt {
  * - Clients should validate pieceLength > 0 and that the number of piece hashes
  *   matches the expected piece count before attempting downloads.
  */
+constexpr int HASH_LENGTH = 20;
+
 struct TorrentFile {
     std::string announce;
-    std::array<uint8_t, 20> infoHash;
-    std::vector<std::array<uint8_t, 20>> pieceHashes;
+    std::array<uint8_t, HASH_LENGTH> infoHash;
+    std::vector<std::array<uint8_t, HASH_LENGTH>> pieceHashes;
     uint64_t pieceLength;
     uint64_t fileLength;
     std::string fileName;
 };
-} // namespace bt
+
+
+const TorrentFile constructTorrentFile( std::string_view& path );
+
+namespace detail {
+const std::vector<uint8_t> loadTorrentFile( std::string_view& path);
+const std::array<uint8_t, HASH_LENGTH> calculateInfoHash( const std::vector<uint8_t>& torrentBuffer );
+}
+} // namespace btd
