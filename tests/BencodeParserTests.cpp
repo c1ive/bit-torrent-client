@@ -259,6 +259,13 @@ TEST_CASE("Parse list with invalid element") {
     REQUIRE_THROWS_AS(bencode::parse("l4spam3:abce"), std::invalid_argument);
 }
 
+TEST_CASE("Parse URL") {
+    auto value = bencode::parse( "41:http://bttracker.debian.org:6969/announce");
+    REQUIRE(std::holds_alternative<std::string>(value));
+    const auto urlStr = std::get<std::string>(value);
+    REQUIRE(urlStr == "http://bttracker.debian.org:6969/announce");
+
+}
 ////////////////
 // Dict tests
 ////////////////
@@ -369,4 +376,51 @@ TEST_CASE("Parse dict with non-string key") {
     REQUIRE_THROWS_AS(bencode::parse("di1e3:bare"), std::invalid_argument);
 }
 
-///// TODO: Torrent file tests would go here /////
+
+/// Use case tests (torrent files) ///
+
+/*
+d
+  8:announce
+    41:http://bttracker.debian.org:6969/announce
+  7:comment
+    35:"Debian CD from cdimage.debian.org"
+  13:creation date
+    i1573903810e
+  4:info
+    d
+      6:length
+        i351272960e
+      4:name
+        31:debian-10.2.0-amd64-netinst.iso
+      12:piece length
+        i262144e
+      6:pieces
+        10:BINARYBLOB
+    e
+e
+*/
+TEST_CASE("Parse simple torrent file") {
+    std::string torrentData = "d8:announce41:http://bttracker.debian.org:6969/announce7:comment33:Debian CD from cdimage.debian.org13:creation datei1573903810e4:infod6:lengthi351272960e4:name31:debian-10.2.0-amd64-netinst.iso12:piece lengthi262144e6:pieces10:BINARYBLOBee";
+    auto value = bencode::parse(torrentData);
+    REQUIRE(std::holds_alternative<bencode::Dict>(value));
+    const auto& dict = std::get<bencode::Dict>(value);
+    REQUIRE(dict.values.size() == 4);
+    REQUIRE(dict.values[0].first == "announce");
+    REQUIRE(std::get<std::string>(dict.values[0].second) == "http://bttracker.debian.org:6969/announce");
+    REQUIRE(dict.values[1].first == "comment");
+    REQUIRE(std::get<std::string>(dict.values[1].second) == "Debian CD from cdimage.debian.org");
+    REQUIRE(dict.values[2].first == "creation date");
+    REQUIRE(std::get<int64_t>(dict.values[2].second) == 1573903810);
+    REQUIRE(dict.values[3].first == "info");
+    const auto& infoDict = std::get<bencode::Dict>(dict.values[3].second);
+    REQUIRE(infoDict.values.size() == 4);
+    REQUIRE(infoDict.values[0].first == "length");
+    REQUIRE(std::get<int64_t>(infoDict.values[0].second) == 351272960);
+    REQUIRE(infoDict.values[1].first == "name");
+    REQUIRE(std::get<std::string>(infoDict.values[1].second) == "debian-10.2.0-amd64-netinst.iso");
+    REQUIRE(infoDict.values[2].first == "piece length");
+    REQUIRE(std::get<int64_t>(infoDict.values[2].second) == 262144);
+    REQUIRE(infoDict.values[3].first == "pieces");
+    REQUIRE(std::get<std::string>(infoDict.values[3].second) == "BINARYBLOB");
+}
