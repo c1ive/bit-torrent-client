@@ -91,7 +91,7 @@ struct Dict {
 
 /// Parse a full bencode payload
 Value parse(std::string_view data);
-// std::string encode(const Value& value);
+std::vector<uint8_t> encode(const Value& value);
 
 template <typename Variant, typename T> struct is_in_variant;
 

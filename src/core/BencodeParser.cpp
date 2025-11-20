@@ -9,6 +9,64 @@ Value parse(std::string_view data) {
     return detail::parse(data, pos);
 }
 
+std::vector<uint8_t> encode(const Value& value) {
+    return std::visit(
+        [](const auto& v) -> std::vector<uint8_t> {
+            using T = std::decay_t<decltype(v)>;
+
+            // integer
+            if constexpr (std::is_same_v<T, int64_t>) {
+                std::string tmp = "i" + std::to_string(v) + "e";
+                return {tmp.begin(), tmp.end()};
+            }
+
+            // string
+            else if constexpr (std::is_same_v<T, std::string>) {
+                std::string tmp = std::to_string(v.size()) + ":";
+                std::vector<uint8_t> res;
+                res.reserve(tmp.size() + v.size());
+                res.insert(res.end(), tmp.begin(), tmp.end());
+                res.insert(res.end(), v.begin(), v.end());
+                return res;
+            }
+
+            // list
+            else if constexpr (std::is_same_v<T, List>) {
+                std::vector<uint8_t> res;
+                res.push_back('l');
+                for (const auto& item : v.values) {
+                    auto part = encode(item);
+                    res.insert(res.end(), part.begin(), part.end());
+                }
+                res.push_back('e');
+                return res;
+            }
+
+            // dict (sorted)
+            else if constexpr (std::is_same_v<T, Dict>) {
+                std::vector<uint8_t> res;
+                res.push_back('d');
+
+                for (const auto& [key, val] : v.values) {
+                    // encode key
+                    {
+                        auto keyEnc = encode(key);
+                        res.insert(res.end(), keyEnc.begin(), keyEnc.end());
+                    }
+                    // encode value
+                    {
+                        auto valEnc = encode(val);
+                        res.insert(res.end(), valEnc.begin(), valEnc.end());
+                    }
+                }
+
+                res.push_back('e');
+                return res;
+            }
+        },
+        value);
+}
+
 namespace detail {
 
 Value parse(std::string_view data, size_t& pos) {
@@ -138,64 +196,5 @@ void _expectChar(std::string_view data, size_t& pos, char expected) {
     }
     pos++;
 }
-
-// std::vector<uint8_t> encode(const Value& value) {
-//     return std::visit(
-//         [](const auto& v) -> std::vector<uint8_t> {
-//             using T = std::decay_t<decltype(v)>;
-
-//             // integer
-//             if constexpr (std::is_same_v<T, int64_t>) {
-//                 std::string tmp = "i" + std::to_string(v) + "e";
-//                 return {tmp.begin(), tmp.end()};
-//             }
-
-//             // string
-//             else if constexpr (std::is_same_v<T, std::string>) {
-//                 std::string tmp = std::to_string(v.size()) + ":";
-//                 std::vector<uint8_t> res;
-//                 res.reserve(tmp.size() + v.size());
-//                 res.insert(res.end(), tmp.begin(), tmp.end());
-//                 res.insert(res.end(), v.begin(), v.end());
-//                 return res;
-//             }
-
-//             // list
-//             else if constexpr (std::is_same_v<T, List>) {
-//                 std::vector<uint8_t> res;
-//                 res.push_back('l');
-//                 for (const auto& item : v.values) {
-//                     auto part = bencode::encode(item);
-//                     res.insert(res.end(), part.begin(), part.end());
-//                 }
-//                 res.push_back('e');
-//                 return res;
-//             }
-
-//             // dict (sorted)
-//             else if constexpr (std::is_same_v<T, Dict>) {
-//                 std::vector<uint8_t> res;
-//                 res.push_back('d');
-
-//                 for (const auto& [key, val] : v.values) {
-//                     // encode key
-//                     {
-//                         auto keyEnc = bencode::encode(key);
-//                         res.insert(res.end(), keyEnc.begin(), keyEnc.end());
-//                     }
-//                     // encode value
-//                     {
-//                         auto valEnc = bencode::encode(val);
-//                         res.insert(res.end(), valEnc.begin(), valEnc.end());
-//                     }
-//                 }
-
-//                 res.push_back('e');
-//                 return res;
-//             }
-//         },
-//         value);
-// }
-
 } // namespace detail
 } // namespace bt::core::bencode

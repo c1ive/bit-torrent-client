@@ -2,6 +2,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 #include <limits>
+#include <string>
+#include <vector>
 
 #include "BencodeParser.hpp"
 
@@ -12,6 +14,10 @@ const bencode::Value& expectDictValue(const bencode::Dict& dict, const std::stri
     auto it = dict.values.find(key);
     REQUIRE_MESSAGE(it != dict.values.end(), "Missing dictionary key: " << key);
     return it->second;
+}
+
+std::string bytesToString(const std::vector<uint8_t>& bytes) {
+    return {bytes.begin(), bytes.end()};
 }
 } // namespace
 
@@ -414,4 +420,48 @@ TEST_CASE("Parse simple torrent file") {
             "debian-10.2.0-amd64-netinst.iso");
     REQUIRE(std::get<int64_t>(expectDictValue(infoDict, "piece length")) == 262144);
     REQUIRE(std::get<std::string>(expectDictValue(infoDict, "pieces")) == "BINARYBLOB");
+}
+
+////////////////////
+// Encoding tests
+////////////////////
+TEST_CASE("Encode integer") {
+    bencode::Value value = int64_t{42};
+    auto encoded = bencode::encode(value);
+    REQUIRE(bytesToString(encoded) == "i42e");
+}
+
+TEST_CASE("Encode string") {
+    bencode::Value value = std::string{"spam"};
+    auto encoded = bencode::encode(value);
+    REQUIRE(bytesToString(encoded) == "4:spam");
+}
+
+TEST_CASE("Encode list") {
+    bencode::List list;
+    list.values.push_back(int64_t{1});
+    list.values.push_back(std::string{"ab"});
+    list.values.push_back(std::string{"e"});
+    auto encoded = bencode::encode(list);
+    REQUIRE(bytesToString(encoded) == "li1e2:ab1:ee");
+}
+
+TEST_CASE("Encode dict sorted by key") {
+    bencode::Dict dict;
+    dict.values.emplace("zeta", std::string{"last"});
+    dict.values.emplace("alpha", int64_t{10});
+    auto encoded = bencode::encode(dict);
+    REQUIRE(bytesToString(encoded) == "d5:alphai10e4:zeta4:laste");
+}
+
+TEST_CASE("Encode nested structure") {
+    bencode::Dict dict;
+    bencode::List list;
+    list.values.push_back(int64_t{1});
+    list.values.push_back(std::string{"ok"});
+    dict.values.emplace("list", list);
+    dict.values.emplace("num", int64_t{7});
+
+    auto encoded = bencode::encode(dict);
+    REQUIRE(bytesToString(encoded) == "d4:listli1e2:oke3:numi7ee");
 }
