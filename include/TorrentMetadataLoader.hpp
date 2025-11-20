@@ -7,53 +7,20 @@
 #include <sys/types.h>
 #include <vector>
 
-namespace bt::core {
 /**
- * @brief Metadata representation of a parsed .torrent file.
+ * @file TorrentMetadataLoader.hpp
+ * @brief Utilities for loading and parsing .torrent metadata.
  *
- * This struct contains the essential metadata a BitTorrent client needs to
- * identify a torrent and verify/download its pieces.
- *
- * Members:
- * - announce
- *   The tracker URL taken from the torrent's "announce" field. May be an
- *   empty string if the torrent does not specify a tracker (e.g. DHT-only).
- *
- * - infoHash
- *   The 20-byte SHA-1 hash of the bencoded "info" dictionary (raw binary, not
- *   hex). This value uniquely identifies the torrent on the network and is
- *   used when communicating with trackers and peers.
- *
- * - pieceHashes
- *   A vector of 20-byte SHA-1 hashes (raw binary) listing the hash for each
- *   piece in order. The number of entries should match the number of pieces
- *   implied by fileLength and pieceLength.
- *
- * - pieceLength
- *   The length in bytes of each piece as specified in the torrent metadata.
- *   All pieces except possibly the last one are expected to be this size.
- *
- * - fileLength
- *   Total length in bytes of the file described by this torrent (for
- *   single-file torrents). For multi-file torrents, this field should be set
- *   according to how the client models multi-file layouts; this struct is
- *   primarily suited for single-file torrents.
- *
- * - fileName
- *   The filename from the torrent's "info" dictionary (for single-file
- *   torrents). For multi-file torrents this may represent the top-level
- *   directory name or be unused depending on client design.
- *
- * Notes:
- * - All hashes are stored as raw 20-byte binary arrays (std::array<uint8_t,20>),
- *   not as hex strings.
- * - Consistency expectation: pieceHashes.size() == ceil(fileLength / pieceLength).
- * - Clients should validate pieceLength > 0 and that the number of piece hashes
- *   matches the expected piece count before attempting downloads.
+ * Declares types and functions to parse bencoded torrent files, extract
+ * metadata, and compute SHA-1 info-hash.
  */
+
+namespace bt::core {
+
 constexpr int HASH_LENGTH = 20;
 using Sha1Hash = std::array<uint8_t, HASH_LENGTH>;
 
+/** Keys used in bencoded dictionaries. */
 struct DictKeys {
     static constexpr const char* COMMENT = "comment";
     static constexpr const char* ANNOUNCE = "announce";
@@ -65,6 +32,7 @@ struct DictKeys {
     static constexpr const char* CREATION_DATE = "creation date";
 };
 
+/** Subset of the torrent's "info" dictionary (per-piece and file info). */
 struct TorrentMetadata {
     std::string announce;
     std::string comment;
@@ -81,6 +49,7 @@ struct TorrentMetadata {
     Info info;
 };
 
+/** Parse a .torrent file buffer into TorrentMetadata. */
 TorrentMetadata parseTorrentData(std::string_view torrentData);
 
 namespace detail {
