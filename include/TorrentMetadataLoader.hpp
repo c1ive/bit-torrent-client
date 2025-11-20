@@ -57,7 +57,9 @@ std::string loadTorrentFile(std::string_view& path);
 bencode::Dict parseRootDict(const std::string& torrentData);
 TorrentMetadata::Info parseInfoDict(const bencode::Dict& infoDict);
 TorrentMetadata parseRootMetadata(const bencode::Dict& rootDict);
-Sha1Hash calculateInfoHash(const std::vector<uint8_t>& torrentBuffer);
+Sha1Hash calculateInfoHash(const TorrentMetadata::Info& infoDictData);
 std::vector<Sha1Hash> parsePieceHashes(const std::string& piecesStr);
+
+void debugLogTorrentMetadata(const TorrentMetadata& metadata);
 } // namespace detail
 } // namespace bt::core

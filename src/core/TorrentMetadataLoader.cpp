@@ -6,12 +6,16 @@
 
 namespace bt::core {
 TorrentMetadata parseTorrentData(std::string_view path) {
-    const auto torrentData = detail::loadTorrentFile(path);
+    using namespace detail;
+    const auto torrentData = loadTorrentFile(path);
 
     spdlog::debug("Parsing torrent data of size: {} bytes", torrentData.size());
 
-    const auto rootDict = detail::parseRootDict(torrentData);
-    return detail::parseRootMetadata(rootDict);
+    const auto rootDict = parseRootDict(torrentData);
+    const auto metadata = parseRootMetadata(rootDict);
+
+    debugLogTorrentMetadata(metadata);
+    return metadata;
 }
 
 namespace detail {
@@ -88,6 +92,12 @@ std::vector<Sha1Hash> parsePieceHashes(const std::string& piecesStr) {
     return pieceHashes;
 }
 
+Sha1Hash calculateInfoHash(const TorrentMetadata::Info& infoDictData) {
+    // Placeholder implementation - actual SHA-1 calculation would go here
+    Sha1Hash dummyHash = {};
+    return dummyHash;
+}
+
 std::string loadTorrentFile(std::string_view& path) {
     spdlog::info("Loading torrent file from path: {}", path);
 
@@ -115,6 +125,18 @@ std::string loadTorrentFile(std::string_view& path) {
     spdlog::debug("Successfully loaded torrent file: {} ({} bytes)", path, fileSize);
 
     return std::string(reinterpret_cast<const char*>(fileData.data()), fileData.size());
+}
+
+void debugLogTorrentMetadata(const TorrentMetadata& metadata) {
+    spdlog::debug("Torrent Metadata:");
+    spdlog::debug("  Announce URL: {}", metadata.announce);
+    spdlog::debug("  Comment: {}", metadata.comment);
+    spdlog::debug("  Creation Date: {}", metadata.creationDate);
+    spdlog::debug("  Info:");
+    spdlog::debug("    File Name: {}", metadata.info.fileName);
+    spdlog::debug("    File Length: {}", metadata.info.fileLength);
+    spdlog::debug("    Piece Length: {}", metadata.info.pieceLength);
+    spdlog::debug("    Number of Pieces: {}", metadata.info.pieceHashes.size());
 }
 } // namespace detail
 } // namespace bt::core

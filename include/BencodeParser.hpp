@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -85,11 +86,12 @@ struct List {
 
 struct Dict {
     const static char id = 'd';
-    std::vector<std::pair<std::string, Value>> values;
+    std::map<std::string, Value> values;
 };
 
 /// Parse a full bencode payload
 Value parse(std::string_view data);
+// std::string encode(const Value& value);
 
 template <typename Variant, typename T> struct is_in_variant;
 
@@ -103,13 +105,10 @@ concept InVariant = is_in_variant<Variant, T>::value;
 template <typename T>
     requires InVariant<Value, T>
 T extractValueFromDict(const Dict& dict, const std::string& key) {
-    auto it = std::find_if(dict.values.begin(), dict.values.end(),
-                           [&key](const auto& pair) { return pair.first == key; });
-
+    auto it = dict.values.find(key);
     if (it != dict.values.end() && std::holds_alternative<T>(it->second)) {
         return std::get<T>(it->second);
     }
-
     throw std::runtime_error("Key '" + key + "' not found or wrong type");
 }
 
@@ -127,20 +126,6 @@ Value parseList(std::string_view data, size_t& pos);
 Value parseDict(std::string_view data, size_t& pos);
 bool _isValidBencodeInt(std::string_view s);
 void _expectChar(std::string_view data, size_t& pos, char expected);
-
-template <typename Container, typename CreateItem>
-Value parseContainer(std::string_view data, size_t& pos, CreateItem createItem) {
-    Container container;
-    _expectChar(data, pos, Container::id);
-
-    while (pos < data.size() && data[pos] != END) {
-        auto item = createItem(data, pos);
-        container.values.push_back(item);
-    }
-
-    _expectChar(data, pos, END);
-    return container;
-}
 } // namespace detail
 
 } // namespace bt::core::bencode

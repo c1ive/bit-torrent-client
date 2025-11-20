@@ -7,6 +7,14 @@
 
 using namespace bt::core;
 
+namespace {
+const bencode::Value& expectDictValue(const bencode::Dict& dict, const std::string& key) {
+    auto it = dict.values.find(key);
+    REQUIRE_MESSAGE(it != dict.values.end(), "Missing dictionary key: " << key);
+    return it->second;
+}
+} // namespace
+
 //////////////////
 // Integer tests
 //////////////////
@@ -46,7 +54,7 @@ TEST_CASE("Parse integer int64 min") {
     REQUIRE(std::get<int64_t>(value) == std::numeric_limits<int64_t>::min());
 }
 
-TEST_CASE("Parse integer negative zero") {
+TEST_CASE("Parse integer negative zero000") {
     REQUIRE_THROWS_AS(bencode::parse("i-0e"), std::invalid_argument);
 }
 
@@ -247,8 +255,8 @@ TEST_CASE("Parse list containing dict") {
     REQUIRE(list.values.size() == 1);
     const auto& dict = std::get<bencode::Dict>(list.values[0]);
     REQUIRE(dict.values.size() == 1);
-    REQUIRE(dict.values[0].first == "key");
-    REQUIRE(std::get<std::string>(dict.values[0].second) == "value");
+    const auto& dictValueEntry = expectDictValue(dict, "key");
+    REQUIRE(std::get<std::string>(dictValueEntry) == "value");
 }
 
 TEST_CASE("Parse list missing terminator") {
@@ -260,11 +268,10 @@ TEST_CASE("Parse list with invalid element") {
 }
 
 TEST_CASE("Parse URL") {
-    auto value = bencode::parse( "41:http://bttracker.debian.org:6969/announce");
+    auto value = bencode::parse("41:http://bttracker.debian.org:6969/announce");
     REQUIRE(std::holds_alternative<std::string>(value));
     const auto urlStr = std::get<std::string>(value);
     REQUIRE(urlStr == "http://bttracker.debian.org:6969/announce");
-
 }
 ////////////////
 // Dict tests
@@ -274,10 +281,8 @@ TEST_CASE("Parse simple dict") {
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
     REQUIRE(dict.values.size() == 2);
-    REQUIRE(dict.values[0].first == "bar");
-    REQUIRE(std::get<std::string>(dict.values[0].second) == "spam");
-    REQUIRE(dict.values[1].first == "foo");
-    REQUIRE(std::get<int64_t>(dict.values[1].second) == 42);
+    REQUIRE(std::get<std::string>(expectDictValue(dict, "bar")) == "spam");
+    REQUIRE(std::get<int64_t>(expectDictValue(dict, "foo")) == 42);
 }
 
 TEST_CASE("Parse empty dict") {
@@ -292,13 +297,11 @@ TEST_CASE("Parse dict with nested list") {
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
     REQUIRE(dict.values.size() == 2);
-    REQUIRE(dict.values[0].first == "list");
-    const auto& list = std::get<bencode::List>(dict.values[0].second);
+    const auto& list = std::get<bencode::List>(expectDictValue(dict, "list"));
     REQUIRE(list.values.size() == 2);
     REQUIRE(std::get<int64_t>(list.values[0]) == 1);
     REQUIRE(std::get<int64_t>(list.values[1]) == 2);
-    REQUIRE(dict.values[1].first == "other");
-    REQUIRE(std::get<std::string>(dict.values[1].second) == "done");
+    REQUIRE(std::get<std::string>(expectDictValue(dict, "other")) == "done");
 }
 
 TEST_CASE("Parse dict with nested dict") {
@@ -306,13 +309,10 @@ TEST_CASE("Parse dict with nested dict") {
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
     REQUIRE(dict.values.size() == 2);
-    REQUIRE(dict.values[0].first == "info");
-    const auto& inner = std::get<bencode::Dict>(dict.values[0].second);
+    const auto& inner = std::get<bencode::Dict>(expectDictValue(dict, "info"));
     REQUIRE(inner.values.size() == 1);
-    REQUIRE(inner.values[0].first == "bar");
-    REQUIRE(std::get<std::string>(inner.values[0].second) == "foo");
-    REQUIRE(dict.values[1].first == "name");
-    REQUIRE(std::get<std::string>(dict.values[1].second) == "test");
+    REQUIRE(std::get<std::string>(expectDictValue(inner, "bar")) == "foo");
+    REQUIRE(std::get<std::string>(expectDictValue(dict, "name")) == "test");
 }
 
 TEST_CASE("Parse dict with list of dicts") {
@@ -320,17 +320,14 @@ TEST_CASE("Parse dict with list of dicts") {
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
     REQUIRE(dict.values.size() == 1);
-    REQUIRE(dict.values[0].first == "data");
-    const auto& list = std::get<bencode::List>(dict.values[0].second);
+    const auto& list = std::get<bencode::List>(expectDictValue(dict, "data"));
     REQUIRE(list.values.size() == 2);
     const auto& firstEntry = std::get<bencode::Dict>(list.values[0]);
     REQUIRE(firstEntry.values.size() == 1);
-    REQUIRE(firstEntry.values[0].first == "key");
-    REQUIRE(std::get<std::string>(firstEntry.values[0].second) == "value");
+    REQUIRE(std::get<std::string>(expectDictValue(firstEntry, "key")) == "value");
     const auto& secondEntry = std::get<bencode::Dict>(list.values[1]);
     REQUIRE(secondEntry.values.size() == 1);
-    REQUIRE(secondEntry.values[0].first == "num");
-    REQUIRE(std::get<int64_t>(secondEntry.values[0].second) == 1);
+    REQUIRE(std::get<int64_t>(expectDictValue(secondEntry, "num")) == 1);
 }
 
 /*
@@ -354,18 +351,15 @@ TEST_CASE("Parse dict with nested list chain") {
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
     REQUIRE(dict.values.size() == 2);
-    REQUIRE(dict.values[0].first == "root");
-    const auto& outerList = std::get<bencode::List>(dict.values[0].second);
+    const auto& outerList = std::get<bencode::List>(expectDictValue(dict, "root"));
     REQUIRE(outerList.values.size() == 1);
     const auto& innerDict = std::get<bencode::Dict>(outerList.values[0]);
     REQUIRE(innerDict.values.size() == 1);
-    REQUIRE(innerDict.values[0].first == "child");
-    const auto& innerList = std::get<bencode::List>(innerDict.values[0].second);
+    const auto& innerList = std::get<bencode::List>(expectDictValue(innerDict, "child"));
     REQUIRE(innerList.values.size() == 2);
     REQUIRE(std::get<int64_t>(innerList.values[0]) == 1);
     REQUIRE(std::get<int64_t>(innerList.values[1]) == 2);
-    REQUIRE(dict.values[1].first == "meta");
-    REQUIRE(std::get<std::string>(dict.values[1].second) == "ok");
+    REQUIRE(std::get<std::string>(expectDictValue(dict, "meta")) == "ok");
 }
 
 TEST_CASE("Parse dict missing terminator") {
@@ -375,7 +369,6 @@ TEST_CASE("Parse dict missing terminator") {
 TEST_CASE("Parse dict with non-string key") {
     REQUIRE_THROWS_AS(bencode::parse("di1e3:bare"), std::invalid_argument);
 }
-
 
 /// Use case tests (torrent files) ///
 
@@ -401,26 +394,24 @@ d
 e
 */
 TEST_CASE("Parse simple torrent file") {
-    std::string torrentData = "d8:announce41:http://bttracker.debian.org:6969/announce7:comment33:Debian CD from cdimage.debian.org13:creation datei1573903810e4:infod6:lengthi351272960e4:name31:debian-10.2.0-amd64-netinst.iso12:piece lengthi262144e6:pieces10:BINARYBLOBee";
+    std::string torrentData = "d8:announce41:http://bttracker.debian.org:6969/"
+                              "announce7:comment33:Debian CD from cdimage.debian.org13:creation "
+                              "datei1573903810e4:infod6:lengthi351272960e4:name31:debian-10.2.0-"
+                              "amd64-netinst.iso12:piece lengthi262144e6:pieces10:BINARYBLOBee";
     auto value = bencode::parse(torrentData);
     REQUIRE(std::holds_alternative<bencode::Dict>(value));
     const auto& dict = std::get<bencode::Dict>(value);
     REQUIRE(dict.values.size() == 4);
-    REQUIRE(dict.values[0].first == "announce");
-    REQUIRE(std::get<std::string>(dict.values[0].second) == "http://bttracker.debian.org:6969/announce");
-    REQUIRE(dict.values[1].first == "comment");
-    REQUIRE(std::get<std::string>(dict.values[1].second) == "Debian CD from cdimage.debian.org");
-    REQUIRE(dict.values[2].first == "creation date");
-    REQUIRE(std::get<int64_t>(dict.values[2].second) == 1573903810);
-    REQUIRE(dict.values[3].first == "info");
-    const auto& infoDict = std::get<bencode::Dict>(dict.values[3].second);
+    REQUIRE(std::get<std::string>(expectDictValue(dict, "announce")) ==
+            "http://bttracker.debian.org:6969/announce");
+    REQUIRE(std::get<std::string>(expectDictValue(dict, "comment")) ==
+            "Debian CD from cdimage.debian.org");
+    REQUIRE(std::get<int64_t>(expectDictValue(dict, "creation date")) == 1573903810);
+    const auto& infoDict = std::get<bencode::Dict>(expectDictValue(dict, "info"));
     REQUIRE(infoDict.values.size() == 4);
-    REQUIRE(infoDict.values[0].first == "length");
-    REQUIRE(std::get<int64_t>(infoDict.values[0].second) == 351272960);
-    REQUIRE(infoDict.values[1].first == "name");
-    REQUIRE(std::get<std::string>(infoDict.values[1].second) == "debian-10.2.0-amd64-netinst.iso");
-    REQUIRE(infoDict.values[2].first == "piece length");
-    REQUIRE(std::get<int64_t>(infoDict.values[2].second) == 262144);
-    REQUIRE(infoDict.values[3].first == "pieces");
-    REQUIRE(std::get<std::string>(infoDict.values[3].second) == "BINARYBLOB");
+    REQUIRE(std::get<int64_t>(expectDictValue(infoDict, "length")) == 351272960);
+    REQUIRE(std::get<std::string>(expectDictValue(infoDict, "name")) ==
+            "debian-10.2.0-amd64-netinst.iso");
+    REQUIRE(std::get<int64_t>(expectDictValue(infoDict, "piece length")) == 262144);
+    REQUIRE(std::get<std::string>(expectDictValue(infoDict, "pieces")) == "BINARYBLOB");
 }
