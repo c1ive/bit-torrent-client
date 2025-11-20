@@ -56,7 +56,7 @@ TEST_CASE("parseTorrentData reads Debian sample torrent") {
     CHECK(metadata.info.pieceHashes.size() == expectedPieces);
 }
 
-TEST_CASE("asdasdaparsePieceHashes rejects malformed input length") {
+TEST_CASE("PieceHashes rejects malformed input length") {
     std::string invalid(bt::core::HASH_LENGTH - 1, '\x00');
     CHECK_THROWS_AS(bt::core::detail::parsePieceHashes(invalid), std::runtime_error);
 }

@@ -19,5 +19,7 @@ int main() {
     } catch (const std::exception& e) {
         spdlog::critical("Error constructing torrent file: {}", e.what());
     }
+
+    spdlog::info("Exiting.");
     return 0;
 }
