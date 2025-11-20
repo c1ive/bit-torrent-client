@@ -1,8 +1,11 @@
 #pragma once
+#include "BencodeParser.hpp"
 #include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <stdexcept>
 
 namespace bt::core {
 /**
@@ -50,7 +53,7 @@ namespace bt::core {
  */
 constexpr int HASH_LENGTH = 20;
 
-struct TorrentFile {
+struct TorrentMetadata {
     std::string announce;
     std::array<uint8_t, HASH_LENGTH> infoHash;
     std::vector<std::array<uint8_t, HASH_LENGTH>> pieceHashes;
@@ -60,10 +63,11 @@ struct TorrentFile {
 };
 
 
-const TorrentFile constructTorrentFile( std::string_view& path );
+const TorrentMetadata constructTorrentFile( std::string_view& path );
 
 namespace detail {
 std::string loadTorrentFile( std::string_view& path);
+TorrentMetadata parseTorrentData( const std::string& torrentData );
 const std::array<uint8_t, HASH_LENGTH> calculateInfoHash( const std::vector<uint8_t>& torrentBuffer );
 }
-} // namespace btd
+} // namespace bt::core

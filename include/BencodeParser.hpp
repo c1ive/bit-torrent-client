@@ -5,6 +5,8 @@
 #include <string_view>
 #include <variant>
 #include <vector>
+#include <algorithm>
+#include <stdexcept>
 
 /**
  * @file BencodeParser.hpp
@@ -88,6 +90,29 @@ struct Dict {
 
 /// Parse a full bencode payload
 Value parse(std::string_view data);
+
+template<typename Variant, typename T>
+struct is_in_variant;
+
+template<typename... Ts, typename T>
+struct is_in_variant<std::variant<Ts...>, T>
+    : std::bool_constant<(std::is_same_v<T, Ts> || ...)> {};
+
+template<typename Variant, typename T>
+concept InVariant = is_in_variant<Variant, T>::value;
+
+template<typename T>
+requires InVariant<Value, T>
+T extractValueFromDict(const Dict& dict, const std::string& key) {
+    auto it = std::find_if(dict.values.begin(), dict.values.end(),
+                           [&key](const auto& pair) { return pair.first == key; });
+
+    if (it != dict.values.end() && std::holds_alternative<T>(it->second)) {
+        return std::get<T>(it->second);
+    }
+
+    throw std::runtime_error("Key '" + key + "' not found or wrong type");
+}
 
 namespace detail {
 template <typename Container, typename CreateItem>

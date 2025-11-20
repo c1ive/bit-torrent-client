@@ -2,9 +2,10 @@
 #include <string>
 
 #include "TorrentMetadataLoader.hpp"
+#include "BencodeParser.hpp"
 
 namespace bt::core {
-const TorrentFile constructTorrentFile( std::string_view& path ) {
+const TorrentMetadata constructTorrentFile( std::string_view& path ) {
     std::string torrentData{};
     try {
         torrentData = detail::loadTorrentFile( path );
@@ -13,11 +14,38 @@ const TorrentFile constructTorrentFile( std::string_view& path ) {
         spdlog::error( "Error loading torrent file: {}", e.what() );
         throw;
     }
-    
-    spdlog::debug( "Torrent file data: {}", torrentData );
+
+    return detail::parseTorrentData( torrentData );
 }
 
 namespace detail {
+TorrentMetadata parseTorrentData( const std::string& torrentData ) {
+    TorrentMetadata metadata;
+
+    // Verify maximal lenght
+    constexpr size_t limit = 10 * 1024 * 1024; // 10 MB
+    if ( torrentData.size() > limit ) {
+        spdlog::error( "Torrent file too large: {} bytes", torrentData.size() );
+        throw std::runtime_error( "Torrent file exceeds maximum allowed size" );
+    }
+
+    bencode::Value value = bencode::parse( torrentData );
+
+    if ( !std::holds_alternative<bencode::Dict>( value ) ) {
+        spdlog::error( "Torrent file root is not a dictionary" );
+        throw std::runtime_error( "Invalid torrent file format" );
+    }
+
+    const auto& dict = std::get<bencode::Dict>( value );
+
+    // Extract announce URL
+    metadata.announce = bencode::extractValueFromDict<std::string>( dict, "announce" );
+
+    // Get the comment and log it
+    spdlog::debug( "Parsed torrent metadata: Announce URL = {}", metadata.announce );
+
+    return metadata;
+}
 std::string loadTorrentFile(std::string_view& path) {
     spdlog::info( "Loading torrent file from path: {}", path );
     
