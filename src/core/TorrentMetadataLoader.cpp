@@ -3,6 +3,7 @@
 
 #include <boost/uuid/detail/sha1.hpp>
 #include <chrono>
+#include <fstream>
 #include <spdlog/spdlog.h>
 #include <string>
 
@@ -16,7 +17,8 @@ TorrentMetadata parseTorrentData(std::string_view path) {
     // Start spdlog timer
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    const auto rootDict = parseRootDict(torrentData);
+    std::string torrentString(torrentData.begin(), torrentData.end());
+    const auto rootDict = parseRootDict(torrentString);
     const auto metadata = parseRootMetadata(rootDict);
 
     // End spdlog timer
@@ -134,33 +136,33 @@ Sha1Hash calculateInfoHash(const TorrentMetadata::Info& infoDictData) {
     return infoHash;
 }
 
-std::string loadTorrentFile(std::string_view& path) {
-    spdlog::info("Loading torrent file from path: {}", path);
+std::vector<uint8_t> loadTorrentFile(const std::filesystem::path& path) {
+    spdlog::info("Loading torrent file from path: {}", path.string());
 
-    // get a file descriptor
-    FILE* file = fopen(std::string(path).c_str(), "rb");
+    if (!std::filesystem::exists(path)) {
+        throw std::runtime_error("Torrent file does not exist: " + path.string());
+    }
+
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
     if (!file) {
-        throw std::runtime_error("Failed to open torrent file");
+        throw std::runtime_error("Failed to open torrent file: " + path.string());
     }
 
-    // seek to end to get file size
-    fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // read file contents
-    std::vector<uint8_t> fileData(fileSize);
-    size_t bytesRead = fread(fileData.data(), 1, fileSize, file);
-    if (bytesRead != static_cast<size_t>(fileSize)) {
-        spdlog::error("Failed to read entire torrent file: {}", path);
-        fclose(file);
-        throw std::runtime_error("Failed to read entire torrent file");
+    auto fileSize = file.tellg();
+    if (fileSize < 0) {
+        throw std::runtime_error("Failed to determine file size: " + path.string());
     }
-    fclose(file);
 
-    spdlog::debug("Successfully loaded torrent file: {} ({} bytes)", path, fileSize);
+    file.seekg(0, std::ios::beg);
+    std::vector<uint8_t> fileData(static_cast<size_t>(fileSize));
+    if (!file.read(reinterpret_cast<char*>(fileData.data()),
+                   static_cast<std::streamsize>(fileSize))) {
+        throw std::runtime_error("Failed to read entire torrent file: " + path.string());
+    }
 
-    return std::string(reinterpret_cast<const char*>(fileData.data()), fileData.size());
+    spdlog::debug("Successfully loaded torrent file: {} ({} bytes)", path.string(),
+                  static_cast<std::size_t>(fileSize));
+    return fileData;
 }
 
 void debugLogTorrentMetadata(const TorrentMetadata& metadata) {

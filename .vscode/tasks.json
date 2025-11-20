@@ -43,7 +43,27 @@
             "type": "shell",
             "command": "${workspaceFolder}/build/bt-bencode-tests",
             "group": "test",
-            "dependsOn": "Build bit-torrent-client"
+            "dependsOn": [
+                "Build bit-torrent-client"
+            ]
+        },
+        {
+            "label": "Test: bt-metadata-loader-tests",
+            "type": "shell",
+            "command": "${workspaceFolder}/build/bt-metadata-loader-tests",
+            "group": "test",
+            "dependsOn": [
+                "Build bit-torrent-client"
+            ]
+        },
+        {
+            "label": "Test: run all",
+            "type": "shell",
+            "command": "${workspaceFolder}/build/bt-metadata-loader-tests && ${workspaceFolder}/build/bt-bencode-tests",
+            "group": "test",
+            "dependsOn": [
+                "Build bit-torrent-client"
+            ]
         }
     ]
 }

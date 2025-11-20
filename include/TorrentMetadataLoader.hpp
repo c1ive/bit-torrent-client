@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <sys/types.h>
 #include <vector>
@@ -53,7 +54,7 @@ struct TorrentMetadata {
 TorrentMetadata parseTorrentData(std::string_view torrentData);
 
 namespace detail {
-std::string loadTorrentFile(std::string_view& path);
+std::vector<uint8_t> loadTorrentFile(const std::filesystem::path& path);
 bencode::Dict parseRootDict(const std::string& torrentData);
 TorrentMetadata::Info parseInfoDict(const bencode::Dict& infoDict);
 TorrentMetadata parseRootMetadata(const bencode::Dict& rootDict);

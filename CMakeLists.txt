@@ -35,4 +35,13 @@ add_executable(bt-bencode-tests
     src/core/BencodeParser.cpp
 )
 
+# Metadata loader tests
+add_executable(bt-metadata-loader-tests
+    tests/TorrentMetadataLoaderTests.cpp
+    src/core/TorrentMetadataLoader.cpp
+    src/core/BencodeParser.cpp
+)
+
 target_link_libraries(bit-torrent-client PRIVATE spdlog::spdlog Boost::boost)
+target_link_libraries(bt-bencode-tests PRIVATE spdlog::spdlog Boost::boost)
+target_link_libraries(bt-metadata-loader-tests PRIVATE spdlog::spdlog Boost::boost)
