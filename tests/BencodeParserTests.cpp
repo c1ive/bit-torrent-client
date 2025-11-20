@@ -19,6 +19,19 @@ const bencode::Value& expectDictValue(const bencode::Dict& dict, const std::stri
 std::string bytesToString(const std::vector<uint8_t>& bytes) {
     return {bytes.begin(), bytes.end()};
 }
+
+std::string buildNestedListPayload(size_t depth) {
+    std::string payload;
+    payload.reserve(depth * 2 + 4);
+
+    for (size_t i = 0; i < depth; ++i) {
+        payload.push_back('l');
+    }
+    payload += "i1e";
+    payload.append(depth, 'e');
+
+    return payload;
+}
 } // namespace
 
 //////////////////
@@ -420,6 +433,33 @@ TEST_CASE("Parse simple torrent file") {
             "debian-10.2.0-amd64-netinst.iso");
     REQUIRE(std::get<int64_t>(expectDictValue(infoDict, "piece length")) == 262144);
     REQUIRE(std::get<std::string>(expectDictValue(infoDict, "pieces")) == "BINARYBLOB");
+}
+
+/////////////////////
+// Stress tests
+/////////////////////
+TEST_CASE("Parse nested list within recursion guard") {
+    REQUIRE(bencode::detail::MAX_RECURSION_DEPTH > 0);
+    const size_t depth = bencode::detail::MAX_RECURSION_DEPTH - 1;
+    auto value = bencode::parse(buildNestedListPayload(depth));
+    REQUIRE(std::holds_alternative<bencode::List>(value));
+
+    const bencode::List* current = &std::get<bencode::List>(value);
+    for (size_t i = 0; i < depth; ++i) {
+        REQUIRE(current->values.size() == 1);
+        if (i == depth - 1) {
+            REQUIRE(std::holds_alternative<int64_t>(current->values[0]));
+            REQUIRE(std::get<int64_t>(current->values[0]) == 1);
+        } else {
+            REQUIRE(std::holds_alternative<bencode::List>(current->values[0]));
+            current = &std::get<bencode::List>(current->values[0]);
+        }
+    }
+}
+
+TEST_CASE("Parse nested list exceeding recursion guard throws") {
+    const size_t depth = bencode::detail::MAX_RECURSION_DEPTH + 1;
+    REQUIRE_THROWS_AS(bencode::parse(buildNestedListPayload(depth)), std::runtime_error);
 }
 
 ////////////////////

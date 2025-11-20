@@ -6,7 +6,7 @@
 namespace bt::core::bencode {
 Value parse(std::string_view data) {
     size_t pos = 0;
-    return detail::parse(data, pos);
+    return detail::parse(data, pos, 0);
 }
 
 std::vector<uint8_t> encode(const Value& value) {
@@ -69,9 +69,13 @@ std::vector<uint8_t> encode(const Value& value) {
 
 namespace detail {
 
-Value parse(std::string_view data, size_t& pos) {
+Value parse(std::string_view data, size_t& pos, size_t depth) {
     if (data.empty()) {
         throw std::invalid_argument("Empty data");
+    }
+
+    if (depth > MAX_RECURSION_DEPTH) {
+        throw std::runtime_error("Bencode recursion depth limit exceeded");
     }
 
     char firstChar = data[pos];
@@ -80,9 +84,9 @@ Value parse(std::string_view data, size_t& pos) {
     } else if (std::isdigit(firstChar)) {
         return parseString(data, pos);
     } else if (firstChar == LIST_START) {
-        return parseList(data, pos);
+        return parseList(data, pos, depth);
     } else if (firstChar == DICT_START) {
-        return parseDict(data, pos);
+        return parseDict(data, pos, depth);
     } else {
         throw std::invalid_argument("Invalid bencode data");
     }
@@ -128,12 +132,12 @@ Value parseString(std::string_view data, size_t& pos) {
 }
 
 // Parse a bencoded list
-Value parseList(std::string_view data, size_t& pos) {
+Value parseList(std::string_view data, size_t& pos, size_t depth) {
     _expectChar(data, pos, List::id);
     List list;
 
     while (pos < data.size() && data[pos] != END) {
-        list.values.push_back(parse(data, pos));
+        list.values.push_back(parse(data, pos, depth + 1));
     }
 
     _expectChar(data, pos, END);
@@ -141,7 +145,7 @@ Value parseList(std::string_view data, size_t& pos) {
 }
 
 // Parse a bencoded dictionary
-Value parseDict(std::string_view data, size_t& pos) {
+Value parseDict(std::string_view data, size_t& pos, size_t depth) {
     _expectChar(data, pos, Dict::id);
     Dict dict;
 
@@ -151,7 +155,7 @@ Value parseDict(std::string_view data, size_t& pos) {
             throw std::invalid_argument("Dict key must be a string");
 
         std::string key = std::get<std::string>(keyVal);
-        Value val = parse(data, pos);
+        Value val = parse(data, pos, depth + 1);
         dict.values.emplace(key, std::move(val)); // std::map insert
     }
 

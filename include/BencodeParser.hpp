@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <stdexcept>
@@ -39,7 +39,8 @@
  *
  * Value parse(std::string_view data);
  *   Decode a complete bencode payload and return the top-level Value.
- *   Throws on malformed input.
+ *   Throws on malformed input. A recursion guard trips once
+ *   detail::MAX_RECURSION_DEPTH is exceeded.
  *
  * ---------------------------------------------------------------------------
  * Internal helpers (detail namespace)
@@ -66,6 +67,9 @@
  * parseDict(data, pos)
  *   Parse a dictionary into a Dict Value. Keys must be strings.
  *
+ * MAX_RECURSION_DEPTH
+ *   Hard limit for nested container depth to prevent stack overflows.
+ *
  * _isValidBencodeInt(s)
  *   Returns true if s is a syntactically valid bencode integer payload.
  *
@@ -91,6 +95,8 @@ struct Dict {
 
 /// Parse a full bencode payload
 Value parse(std::string_view data);
+
+// Encode a bencode Value into its byte representation
 std::vector<uint8_t> encode(const Value& value);
 
 template <typename Variant, typename T> struct is_in_variant;
@@ -118,12 +124,13 @@ constexpr char LIST_START = 'l';
 constexpr char DICT_START = 'd';
 constexpr char END = 'e';
 constexpr char COLON = ':';
+constexpr size_t MAX_RECURSION_DEPTH = 10000;
 
-Value parse(std::string_view data, size_t& pos);
+Value parse(std::string_view data, size_t& pos, size_t depth);
 Value parseInt(std::string_view data, size_t& pos);
 Value parseString(std::string_view data, size_t& pos);
-Value parseList(std::string_view data, size_t& pos);
-Value parseDict(std::string_view data, size_t& pos);
+Value parseList(std::string_view data, size_t& pos, size_t depth);
+Value parseDict(std::string_view data, size_t& pos, size_t depth);
 bool _isValidBencodeInt(std::string_view s);
 void _expectChar(std::string_view data, size_t& pos, char expected);
 } // namespace detail
