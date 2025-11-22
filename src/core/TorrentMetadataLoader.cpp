@@ -4,8 +4,8 @@
 #include <boost/uuid/detail/sha1.hpp>
 #include <chrono>
 #include <fstream>
-#include <spdlog/spdlog.h>
 #include <spdlog/fmt/bin_to_hex.h>
+#include <spdlog/spdlog.h>
 #include <string>
 
 namespace bt::core {
@@ -69,7 +69,7 @@ TorrentMetadata::Info parseInfoDict(const bencode::Dict& infoDict) {
         throw std::runtime_error("Invalid file length in torrent metadata");
 
     const auto fileName = bencode::extractValueFromDict<std::string>(infoDict, DictKeys::NAME);
-    
+
     return TorrentMetadata::Info{.pieceHashes = pieceHashes,
                                  .rawPieces = piecesStr,
                                  .pieceLength = static_cast<uint64_t>(pieceLength),
@@ -97,7 +97,8 @@ TorrentMetadata parseRootMetadata(const bencode::Dict& rootDict) {
 std::vector<Sha1Hash> parsePieceHashes(const std::string& piecesStr) {
     // SAFETY GUARD:
     // Ensure Sha1Hash is just raw bytes in memory (likely std::array<uint8_t, 20>)
-    static_assert(std::is_trivially_copyable_v<Sha1Hash>, "Sha1Hash must be trivially copyable for memcpy");
+    static_assert(std::is_trivially_copyable_v<Sha1Hash>,
+                  "Sha1Hash must be trivially copyable for memcpy");
     static_assert(sizeof(Sha1Hash) == HASH_LENGTH, "Sha1Hash size mismatch");
 
     if (piecesStr.size() % HASH_LENGTH != 0) {
@@ -112,7 +113,7 @@ std::vector<Sha1Hash> parsePieceHashes(const std::string& piecesStr) {
     const uint8_t* src = reinterpret_cast<const uint8_t*>(piecesStr.data());
     uint8_t* dst = reinterpret_cast<uint8_t*>(pieceHashes.data());
 
-    // Before performing a raw memory copy, strictly verify that the 
+    // Before performing a raw memory copy, strictly verify that the
     // destination buffer size in bytes matches the source size.
     // This protects against future logic errors in 'resize' or 'numHashes' calculation.
     assert(pieceHashes.size() * sizeof(Sha1Hash) == piecesStr.size());
@@ -161,10 +162,10 @@ std::string loadTorrentFile(const std::filesystem::path& path) {
     file.seekg(0, std::ios::beg);
     std::string fileData;
     fileData.resize(static_cast<size_t>(fileSize)); // Allocate once
-    
+
     // Read directly into string buffer
     if (!file.read(fileData.data(), static_cast<std::streamsize>(fileSize))) {
-         throw std::runtime_error("Failed to read...");
+        throw std::runtime_error("Failed to read...");
     }
 
     // Verify that the file stream actually read the number of bytes we expected.

@@ -16,14 +16,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spdlog)
 
 find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS url)
 
 # Create a static library named 'bt_core'.
-# This compiles the .cpp files into a .a (Linux/Mac) or .lib (Windows) file.
 add_library(bt_core STATIC
     src/core/TorrentMetadataLoader.cpp
     src/core/Handshake.cpp
     src/core/Peer.cpp
     src/core/BencodeParser.cpp
+    src/core/Connection.cpp
 )
 
 # Define include directories for the library.
@@ -35,6 +36,7 @@ target_include_directories(bt_core PUBLIC
 target_link_libraries(bt_core PUBLIC 
     spdlog::spdlog 
     Boost::boost
+    Boost::url
 )
 
 # --- Main Executable ---
