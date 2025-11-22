@@ -124,7 +124,7 @@ constexpr char LIST_START = 'l';
 constexpr char DICT_START = 'd';
 constexpr char END = 'e';
 constexpr char COLON = ':';
-constexpr size_t MAX_RECURSION_DEPTH = 10000;
+constexpr size_t MAX_RECURSION_DEPTH = 1000;
 
 Value parse(std::string_view data, size_t& pos, size_t depth);
 Value parseInt(std::string_view data, size_t& pos);
