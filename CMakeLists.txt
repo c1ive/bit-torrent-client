@@ -15,6 +15,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
+FetchContent_Declare(
+    cpr
+    GIT_REPOSITORY https://github.com/libcpr/cpr.git
+    GIT_TAG 1.10.0 # Check for latest version
+)
+FetchContent_MakeAvailable(cpr)
+
 find_package(Boost REQUIRED)
 find_package(Boost REQUIRED COMPONENTS url)
 
@@ -37,6 +44,7 @@ target_link_libraries(bt_core PUBLIC
     spdlog::spdlog 
     Boost::boost
     Boost::url
+    cpr::cpr
 )
 
 # --- Main Executable ---

@@ -1,7 +1,9 @@
 // Core module with essentaial networking functionalities.
 #include <random>
+#include <stdexcept>
 
 #include "Connection.hpp"
+#include "cpr/response.h"
 
 namespace bt::core {
 std::string urlEncode(const std::string_view str) {
@@ -38,4 +40,12 @@ std::string generateId(int length) {
     return random_string;
 }
 
+cpr::Response announce(std::string_view url) {
+    const auto r = cpr::Get(cpr::Url{url});
+    if (r.status_code != 200) {
+        throw std::runtime_error{"Announcing failed"};
+    }
+
+    return r;
+}
 } // namespace bt::core

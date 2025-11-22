@@ -1,3 +1,4 @@
+#include "BencodeParser.hpp"
 #include "Connection.hpp"
 #include "TorrentMetadataLoader.hpp"
 #include "spdlog/common.h"
@@ -32,8 +33,15 @@ int main(int argc, char* argv[]) {
     spdlog::debug("generated a peer id: {}", id.data());
 
     // generate the final announce url
-    const auto ulr = core::buildTrackerUrl(torrent, id);
-    spdlog::debug("build the final tracker url: {}", ulr.data());
+    const auto url = core::buildTrackerUrl(torrent, id);
+    spdlog::debug("build the final tracker url: {}", url.data());
+
+    spdlog::debug("Announcing to the tracker url...");
+
+    const auto r = core::announce(url.data());
+    spdlog::debug("Repsonse from tracker: {}", r.text);
+
+    auto parsedText = core::bencode::parse(r.text);
 
     spdlog::info("Exiting.");
     return 0;
