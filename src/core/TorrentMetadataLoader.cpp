@@ -59,6 +59,11 @@ TorrentMetadata::Info parseInfoDict(const bencode::Dict& infoDict) {
     const auto piecesStr = bencode::extractValueFromDict<std::string>(infoDict, DictKeys::PIECES);
     const auto pieceHashes = parsePieceHashes(piecesStr);
 
+    // DATA INTEGRITY
+    // Ensure we didn't lose or gain data during the vector conversion.
+    // The raw string size must match the vector size * hash length exactly.
+    assert(piecesStr.size() == pieceHashes.size() * HASH_LENGTH);
+
     const auto fileLength = bencode::extractValueFromDict<int64_t>(infoDict, DictKeys::LENGTH);
     if (fileLength < 0)
         throw std::runtime_error("Invalid file length in torrent metadata");
@@ -94,7 +99,7 @@ std::vector<Sha1Hash> parsePieceHashes(const std::string& piecesStr) {
     // Ensure Sha1Hash is just raw bytes in memory (likely std::array<uint8_t, 20>)
     static_assert(std::is_trivially_copyable_v<Sha1Hash>, "Sha1Hash must be trivially copyable for memcpy");
     static_assert(sizeof(Sha1Hash) == HASH_LENGTH, "Sha1Hash size mismatch");
-    
+
     if (piecesStr.size() % HASH_LENGTH != 0) {
         throw std::runtime_error("Invalid pieces string length in torrent metadata");
     }
@@ -107,6 +112,10 @@ std::vector<Sha1Hash> parsePieceHashes(const std::string& piecesStr) {
     const uint8_t* src = reinterpret_cast<const uint8_t*>(piecesStr.data());
     uint8_t* dst = reinterpret_cast<uint8_t*>(pieceHashes.data());
 
+    // Before performing a raw memory copy, strictly verify that the 
+    // destination buffer size in bytes matches the source size.
+    // This protects against future logic errors in 'resize' or 'numHashes' calculation.
+    assert(pieceHashes.size() * sizeof(Sha1Hash) == piecesStr.size());
     std::memcpy(dst, src, piecesStr.size());
 
     return pieceHashes;
@@ -157,6 +166,10 @@ std::string loadTorrentFile(const std::filesystem::path& path) {
     if (!file.read(fileData.data(), static_cast<std::streamsize>(fileSize))) {
          throw std::runtime_error("Failed to read...");
     }
+
+    // Verify that the file stream actually read the number of bytes we expected.
+    // file.read() sets failbit on error, but gcount() confirms the byte count.
+    assert(file.gcount() == static_cast<std::streamsize>(fileSize));
     return fileData;
 }
 
