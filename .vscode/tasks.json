@@ -57,9 +57,18 @@
             ]
         },
         {
+            "label": "Test: bt-connection-tests",
+            "type": "shell",
+            "command": "${workspaceFolder}/build/bt-connection-tests",
+            "group": "test",
+            "dependsOn": [
+                "Build: bit-torrent-client"
+            ]
+        },
+        {
             "label": "Test: run all",
             "type": "shell",
-            "command": "${workspaceFolder}/build/bt-metadata-loader-tests && ${workspaceFolder}/build/bt-bencode-tests",
+            "command": "${workspaceFolder}/build/bt-metadata-loader-tests && ${workspaceFolder}/build/bt-bencode-tests && ${workspaceFolder}/build/bt-connection-tests",
             "group": "test",
             "dependsOn": [
                 "Build: bit-torrent-client"

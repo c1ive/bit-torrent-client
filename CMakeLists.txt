@@ -66,3 +66,8 @@ target_link_libraries(bt-bencode-tests PRIVATE bt_core)
 add_executable(bt-metadata-loader-tests tests/TorrentMetadataLoaderTests.cpp)
 target_include_directories(bt-metadata-loader-tests PRIVATE ${TEST_INCLUDE_DIRS})
 target_link_libraries(bt-metadata-loader-tests PRIVATE bt_core)
+
+# Connection module tests
+add_executable(bt-connection-tests tests/ConnectionTests.cpp)
+target_include_directories(bt-connection-tests PRIVATE ${TEST_INCLUDE_DIRS})
+target_link_libraries(bt-connection-tests PRIVATE bt_core)
