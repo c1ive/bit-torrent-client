@@ -10,8 +10,7 @@
 
 namespace bt::core {
 TorrentMetadata parseTorrentData(std::string_view path) {
-    using namespace detail;
-    const auto torrentData = loadTorrentFile(path);
+    const auto torrentData = detail::loadTorrentFile(path);
 
     spdlog::debug("Parsing torrent data of size: {} bytes", torrentData.size());
 
@@ -19,15 +18,15 @@ TorrentMetadata parseTorrentData(std::string_view path) {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     const auto& torrentString = torrentData;
-    const auto rootDict = parseRootDict(torrentString);
-    const auto metadata = parseRootMetadata(rootDict);
+    const auto rootDict = detail::parseRootDict(torrentString);
+    const auto metadata = detail::parseRootMetadata(rootDict);
 
     // End spdlog timer
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration =
         std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
     spdlog::debug("Parsed and loaded torrent metadata in {} us", duration);
-    debugLogTorrentMetadata(metadata);
+    detail::debugLogTorrentMetadata(metadata);
     return metadata;
 }
 

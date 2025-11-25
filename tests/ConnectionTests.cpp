@@ -17,7 +17,7 @@ std::filesystem::path fixtureTorrentPath() {
 
 TEST_CASE("generateId produces correct length and charset") {
     constexpr int len = 20;
-    const auto id = bt::core::generateId(len);
+    const auto id = bt::core::detail::generateId(len);
     REQUIRE(id.size() == static_cast<size_t>(len));
 
     // Allowed characters set used in implementation
@@ -35,9 +35,9 @@ TEST_CASE("buildTrackerUrl includes required parameters") {
                     "Fixture torrent missing: " << torrentPath.string());
 
     const auto metadata = bt::core::parseTorrentData(torrentPath.string());
-    const auto peerId = bt::core::generateId(20);
+    const auto peerId = bt::core::detail::generateId(20);
 
-    const auto trackerUrl = bt::core::buildTrackerUrl(metadata, peerId);
+    const auto trackerUrl = bt::core::detail::buildTrackerUrl(metadata, peerId);
 
     // Boost URL stores encoded URL in its buffer
     const std::string urlStr = std::string(trackerUrl.buffer());
@@ -53,6 +53,6 @@ TEST_CASE("buildTrackerUrl includes required parameters") {
 
 TEST_CASE("announce throws on non-200 response") {
     // Using a known 404 endpoint to force failure
-    CHECK_THROWS_AS(bt::core::announceToTracker("https://httpbin.org/status/404"),
+    CHECK_THROWS_AS(bt::core::detail::announceToTracker("https://httpbin.org/status/404"),
                     std::runtime_error);
 }
