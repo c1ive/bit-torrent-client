@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "BencodeParser.hpp"
+#include "core/bencode_parser.hpp"
 
 using namespace bt::core;
 

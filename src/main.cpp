@@ -1,23 +1,41 @@
-#include "TorrentMetadataLoader.hpp"
-#include "TrackerCommunicator.hpp"
+#include "core/torrent_metadata_loader.hpp"
+#include "core/tracker_communicator.hpp"
 #include "spdlog/common.h"
 #include "spdlog/spdlog.h"
 
+#include <argparse/argparse.hpp>
 #include <string_view>
 
 using namespace bt;
 int main(int argc, char* argv[]) {
     // Parse command line arguments (if any)
-    if (argc < 2) {
-        spdlog::error("Usage: {} <path_to_torrent_file>", argv[0]);
+    argparse::ArgumentParser app("bit-torrent-client");
+    app.add_argument("-t", "--torrent").required().help("Path to the torrent file");
+    app.add_argument("-v", "--verbose")
+        .help("Verbose logs (for debugging)")
+        .default_value(false)
+        .implicit_value(true);
+
+    try {
+        app.parse_args(argc, argv);
+    } catch (const std::exception& err) {
+        std::cerr << err.what() << std::endl;
+        std::cerr << app;
         return 1;
     }
-    std::string_view path = argv[1];
+
+    if (app["--verbose"] == true) {
+        spdlog::set_level(spdlog::level::debug);
+    } else {
+        spdlog::set_level(spdlog::level::info);
+    }
+
+    const auto path = app.get<std::string>("--torrent");
 
     // Logger setup
-    spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%H:%M:%S %z] [%n] [%^%l%$] [thread %t] %v");
 
+    /// Setup and start app orchestrators
     spdlog::info("Main loop starts now");
     core::TorrentMetadata torrent;
     try {

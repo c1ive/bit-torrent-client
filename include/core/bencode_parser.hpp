@@ -10,7 +10,7 @@
 #include <vector>
 
 /**
- * @file BencodeParser.hpp
+ * @file bencode_parser.hpp
  * @brief Decode bencoded data into an in-memory representation.
  *
  * Supports integers, byte strings, lists, and dictionaries per the

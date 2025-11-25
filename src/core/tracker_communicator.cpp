@@ -1,7 +1,7 @@
 // Core module with essentaial networking functionalities.
-#include "TrackerCommunicator.hpp"
-#include "BencodeParser.hpp"
-#include "TorrentMetadataLoader.hpp"
+#include "core/tracker_communicator.hpp"
+#include "core/bencode_parser.hpp"
+#include "core/torrent_metadata_loader.hpp"
 #include <cpr/response.h>
 #include <cstdint>
 #include <random>

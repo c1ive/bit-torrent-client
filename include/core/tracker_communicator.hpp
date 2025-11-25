@@ -1,10 +1,11 @@
+#pragma once
 #include <boost/url.hpp>
 #include <cpr/cpr.h>
 #include <string>
 #include <string_view>
 
-#include "TorrentMetadataLoader.hpp"
 #include "cpr/response.h"
+#include "torrent_metadata_loader.hpp"
 
 namespace bt::core {
 

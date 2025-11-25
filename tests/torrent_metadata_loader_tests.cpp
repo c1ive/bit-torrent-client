@@ -2,7 +2,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 
-#include "TorrentMetadataLoader.hpp"
+#include "core/torrent_metadata_loader.hpp"
 
 namespace {
 std::filesystem::path fixtureTorrentPath() {

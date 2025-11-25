@@ -1,5 +1,5 @@
-#include "TorrentMetadataLoader.hpp"
-#include "BencodeParser.hpp"
+#include "core/torrent_metadata_loader.hpp"
+#include "core/bencode_parser.hpp"
 
 #include <boost/uuid/detail/sha1.hpp>
 #include <chrono>

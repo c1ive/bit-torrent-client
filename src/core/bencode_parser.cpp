@@ -1,7 +1,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "BencodeParser.hpp"
+#include "core/bencode_parser.hpp"
 
 namespace bt::core::bencode {
 Value parse(std::string_view data) {

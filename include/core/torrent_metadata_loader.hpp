@@ -1,23 +1,21 @@
 #pragma once
-#include "BencodeParser.hpp"
+#include "bencode_parser.hpp"
 
 #include <array>
+#include <boost/uuid/detail/sha1.hpp>
 #include <cstdint>
 #include <filesystem>
 #include <string>
 #include <sys/types.h>
 #include <vector>
-#include <boost/uuid/detail/sha1.hpp>
-
 
 /**
- * @file TorrentMetadataLoader.hpp
+ * @file torrent_metadata_loader.hpp
  * @brief Utilities for loading and parsing .torrent metadata.
  *
  * Declares types and functions to parse bencoded torrent files, extract
  * metadata, and compute SHA-1 info-hash.
  */
-
 
 using namespace boost::uuids::detail;
 
