@@ -3,6 +3,8 @@
 #include <spdlog/spdlog.h>
 #include <string_view>
 
+using namespace bt;
+
 TorrentOrchestrator::TorrentOrchestrator(std::string path) : _metadata(_loadMetadata(path)) {};
 
 core::TorrentMetadata TorrentOrchestrator::_loadMetadata(const std::string_view path) const {

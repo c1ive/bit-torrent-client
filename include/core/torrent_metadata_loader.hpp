@@ -17,8 +17,6 @@
  * metadata, and compute SHA-1 info-hash.
  */
 
-using namespace boost::uuids::detail;
-
 namespace bt::core {
 constexpr int HASH_LENGTH = 20;
 using Sha1Hash = std::array<uint8_t, HASH_LENGTH>;

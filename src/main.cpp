@@ -3,6 +3,7 @@
 #include "spdlog/common.h"
 #include "spdlog/spdlog.h"
 #include <argparse/argparse.hpp>
+#include <ostream>
 #include <string_view>
 
 struct Settings {
@@ -18,8 +19,13 @@ static Settings parse_args(int argc, char* argv[]) {
         .help("Verbose logs")
         .default_value(false)
         .implicit_value(true);
-
-    app.parse_args(argc, argv);
+    try {
+        app.parse_args(argc, argv);
+    } catch (const std::exception& err) {
+        std::cerr << err.what() << std::endl;
+        std::cerr << app;
+        std::exit(1);
+    }
 
     return {app.get<std::string>("--torrent"), app.get<bool>("--verbose")};
 }
