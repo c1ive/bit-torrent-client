@@ -1,3 +1,6 @@
+#pragma once
+
+#include "app/peer_manager.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include <string>
 
@@ -6,7 +9,7 @@ private:
     bt::core::TorrentMetadata _metadata;
     bt::core::TorrentMetadata _loadMetadata(const std::string_view path) const;
 
-    // PeerManager
+    std::optional<bt::PeerManager> _peerManager;
     // PiecesManager
     //...
 

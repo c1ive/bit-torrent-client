@@ -62,7 +62,8 @@ std::string generateId(int length) {
 cpr::Response announceToTracker(std::string_view url) {
     const auto r = cpr::Get(cpr::Url{url});
     if (r.status_code != 200) {
-        throw std::runtime_error{"Announcing failed"};
+        std::string msg = "Announcing failed: " + r.error.message;
+        throw std::runtime_error(msg);
     }
 
     return r;
@@ -99,15 +100,7 @@ std::vector<std::array<uint8_t, 6>> toSixByteArrays(const std::string_view blob)
 }
 
 void debugLogTrackerResponse(const TrackerResponse& r) {
-    for (size_t i = 0; i < r.peersBlob.size(); ++i) {
-        const auto& peer = r.peersBlob[i];
-        unsigned a = static_cast<unsigned>(peer[0]);
-        unsigned b = static_cast<unsigned>(peer[1]);
-        unsigned c = static_cast<unsigned>(peer[2]);
-        unsigned d = static_cast<unsigned>(peer[3]);
-        unsigned port = (static_cast<unsigned>(peer[4]) << 8) | static_cast<unsigned>(peer[5]);
-        spdlog::debug("  [{}] {}.{}.{}.{}:{}", i, a, b, c, d, port);
-    }
+    spdlog::info("Tracker response: interval={}, peers={}", r.interval, r.peersBlob.size());
 }
 } // namespace detail
 } // namespace bt::core

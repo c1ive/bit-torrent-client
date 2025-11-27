@@ -61,7 +61,11 @@ target_link_libraries(bt_core PUBLIC
 )
 
 # --- Main Executable ---
-add_executable(bit-torrent-client src/main.cpp src/app/torrent_orchestrator.cpp)
+add_executable(bit-torrent-client 
+    src/main.cpp 
+    src/app/torrent_orchestrator.cpp
+    src/app/peer_manager.cpp    
+)
 
 # Link the main app to our core library.
 target_link_libraries(bit-torrent-client PRIVATE bt_core argparse)

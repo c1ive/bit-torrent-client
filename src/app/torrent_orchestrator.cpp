@@ -23,6 +23,8 @@ void TorrentOrchestrator::start() {
     // For now just call the core function, should be done by a sepearte manager in the future to
     // handle the interval...
     const auto trackerResponse = core::announceAndGetPeers(_metadata);
-    spdlog::info("Tracker response: interval: {}, number of peers: {}", trackerResponse.interval,
-                 trackerResponse.peersBlob.size());
+
+    // peer blob gets consumed when creating the peer manager
+    _peerManager.emplace(std::move(trackerResponse.peersBlob));
+    _peerManager->start();
 }
