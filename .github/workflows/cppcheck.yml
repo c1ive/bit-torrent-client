@@ -31,5 +31,6 @@ jobs:
             --force \
             --inline-suppr \
             --suppress=missingIncludeSystem \
+            -I include \
             --error-exitcode=1 \
             include src
