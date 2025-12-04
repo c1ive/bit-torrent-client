@@ -1,6 +1,7 @@
 #include "core/torrent_metadata_loader.hpp"
 #include "core/bencode_parser.hpp"
 
+#include <algorithm>
 #include <boost/uuid/detail/sha1.hpp>
 #include <chrono>
 #include <fstream>
@@ -136,9 +137,7 @@ Sha1Hash calculateInfoHash(const TorrentMetadata::Info& infoDictData) {
     sha1.get_digest(hash);
 
     Sha1Hash infoHash;
-    for (size_t i = 0; i < HASH_LENGTH; ++i) {
-        infoHash[i] = static_cast<uint8_t>((hash[i / 4] >> (8 * (3 - (i % 4)))) & 0xFF);
-    }
+    std::copy_n(hash, 20, infoHash.begin());
 
     return infoHash;
 }
