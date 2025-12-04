@@ -66,18 +66,6 @@ jobs:
           mkdir -p "${GITHUB_WORKSPACE}/.vcpkg-cache"
         shell: bash
 
-      - name: Bootstrap / install vcpkg (Ubuntu)
-        run: |
-          VCPKG_DIR="${GITHUB_WORKSPACE}/third_party/vcpkg"
-          if [ ! -d "$VCPKG_DIR" ]; then
-            git clone --depth 1 https://github.com/microsoft/vcpkg "$VCPKG_DIR"
-          fi
-          pushd "$VCPKG_DIR"
-          ./bootstrap-vcpkg.sh -disableMetrics
-          ./vcpkg install --triplet "${{ steps.triplet.outputs.TRIPLET }}"
-          popd
-        shell: bash
-
       - name: Configure (CMake with preset)
         run: |
           cmake --preset debug
