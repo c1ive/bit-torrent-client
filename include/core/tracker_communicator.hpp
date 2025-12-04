@@ -1,10 +1,10 @@
 #pragma once
 #include <boost/url.hpp>
 #include <cpr/cpr.h>
+#include <cpr/response.h>
 #include <string>
 #include <string_view>
 
-#include "cpr/response.h"
 #include "torrent_metadata_loader.hpp"
 
 /**

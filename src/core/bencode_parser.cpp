@@ -96,7 +96,6 @@ Value parseInt(std::string_view data, size_t& pos) {
     if (data[pos] != 'i') {
         throw std::invalid_argument("Expected int");
     }
-    size_t start = pos;
     pos++; // skip 'i'
 
     size_t end = data.find('e', pos);
@@ -112,8 +111,6 @@ Value parseInt(std::string_view data, size_t& pos) {
 }
 
 Value parseString(std::string_view data, size_t& pos) {
-    size_t start = pos;
-
     size_t colon = data.find(':', pos);
     if (colon == std::string::npos)
         throw std::invalid_argument("Bad string");

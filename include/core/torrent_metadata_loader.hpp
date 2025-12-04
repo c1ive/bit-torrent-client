@@ -53,7 +53,7 @@ struct TorrentMetadata {
 };
 
 /** Parse a .torrent file buffer into TorrentMetadata. */
-TorrentMetadata parseTorrentData(std::string_view torrentData);
+TorrentMetadata parseTorrentData(std::string_view path);
 
 namespace detail {
 std::string loadTorrentFile(const std::filesystem::path& path);

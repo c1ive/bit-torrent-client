@@ -1,9 +1,9 @@
 #include "app/torrent_orchestrator.hpp"
 
-#include "spdlog/common.h"
-#include "spdlog/spdlog.h"
 #include <argparse/argparse.hpp>
 #include <ostream>
+#include <spdlog/common.h>
+#include <spdlog/spdlog.h>
 #include <string_view>
 
 struct Settings {
