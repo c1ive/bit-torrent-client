@@ -41,20 +41,11 @@ jobs:
           echo "TRIPLET=x64-linux" >> $GITHUB_OUTPUT
         shell: bash
 
-      - name: Configure vcpkg caching env (before any configure/build)
-        run: |
-          echo "VCPKG_FEATURE_FLAGS=manifests,binarycaching" >> "$GITHUB_ENV"
-          echo "VCPKG_DEFAULT_TRIPLET=x64-linux" >> "$GITHUB_ENV"
-          echo "VCPKG_ROOT=${GITHUB_WORKSPACE}/third_party/vcpkg" >> "$GITHUB_ENV"
-          echo "VCPKG_BINARY_SOURCES=clear;x-gha;files,${GITHUB_WORKSPACE}/.vcpkg-cache,readwrite" >> "$GITHUB_ENV"
-          mkdir -p "${GITHUB_WORKSPACE}/.vcpkg-cache"
-        shell: bash
-
       - name: Cache local vcpkg binary cache
         uses: actions/cache@v4
         with:
           path: |
-            .vcpkg-cache
+            ~/vcpkg_installed
           key: ${{ runner.os }}-vcpkg-bincache-${{ hashFiles('vcpkg.json') }}-${{ matrix.build_type }}
           restore-keys: |
             ${{ runner.os }}-vcpkg-bincache-

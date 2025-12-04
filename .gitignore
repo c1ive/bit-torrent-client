@@ -1,6 +1,5 @@
 /target
 build/
 .cache
-*.torrent
 
 vcpkg_installed/
