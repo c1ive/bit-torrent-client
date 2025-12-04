@@ -67,7 +67,7 @@ jobs:
           fi
           pushd "$VCPKG_DIR"
           ./bootstrap-vcpkg.sh -disableMetrics
-          ./vcpkg install --manifest --triplet "${{ steps.triplet.outputs.TRIPLET }}"
+          ./vcpkg install --triplet "${{ steps.triplet.outputs.TRIPLET }}"
           popd
         shell: bash
 
