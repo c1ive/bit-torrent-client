@@ -85,7 +85,7 @@ jobs:
 
       - name: Build (CMake with preset)
         run: |
-          cmake --build --preset debug --parallel
+          cmake --build build/debug
         shell: bash
 
       - name: Run doctest executables and collect logs
