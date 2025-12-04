@@ -19,7 +19,7 @@ on:
     branches: [ main, master ]
 
 env:
-  BUILD_DIR: build
+  BUILD_DIR: build/debug
 
 jobs:
   build-and-run-tests:
@@ -59,6 +59,13 @@ jobs:
           sudo apt-get install -y build-essential cmake ninja-build git
         shell: bash
 
+      - name: Configure vcpkg binary caching
+        run: |
+          echo "VCPKG_FEATURE_FLAGS=manifests,binarycaching" >> "$GITHUB_ENV"
+          echo "VCPKG_BINARY_SOURCES=clear;x-gha;files,${GITHUB_WORKSPACE}/.vcpkg-cache,readwrite" >> "$GITHUB_ENV"
+          mkdir -p "${GITHUB_WORKSPACE}/.vcpkg-cache"
+        shell: bash
+
       - name: Bootstrap / install vcpkg (Ubuntu)
         run: |
           VCPKG_DIR="${GITHUB_WORKSPACE}/third_party/vcpkg"
@@ -71,16 +78,14 @@ jobs:
           popd
         shell: bash
 
-      - name: Configure (CMake with vcpkg toolchain)
+      - name: Configure (CMake with preset)
         run: |
-          cmake -S . -B "${{ env.BUILD_DIR }}" -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/third_party/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          cmake --preset debug
         shell: bash
 
-      - name: Build
-        run: cmake --build "${{ env.BUILD_DIR }}" --config ${{ matrix.build_type }} --parallel
+      - name: Build (CMake with preset)
+        run: |
+          cmake --build --preset debug --parallel
         shell: bash
 
       - name: Run doctest executables and collect logs
