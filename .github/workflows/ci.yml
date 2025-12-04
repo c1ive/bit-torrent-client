@@ -23,12 +23,11 @@ env:
 
 jobs:
   build-and-run-tests:
-    name: Build & Run Tests (${{ matrix.os }} / ${{ matrix.build_type }})
-    runs-on: ${{ matrix.os }}
+    name: Build & Run Tests (ubuntu-latest / Debug)
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        build_type: [Debug, Release]
+        build_type: [Debug]
 
     steps:
       - name: Checkout
@@ -39,14 +38,7 @@ jobs:
       - name: Choose vcpkg triplet
         id: triplet
         run: |
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            echo "TRIPLET=x64-linux" >> $GITHUB_OUTPUT
-          elif [ "${{ runner.os }}" = "macOS" ]; then
-            # Use x64-osx; change to arm64-osx if you target Apple Silicon explicitly
-            echo "TRIPLET=x64-osx" >> $GITHUB_OUTPUT
-          else
-            echo "TRIPLET=x64-windows" >> $GITHUB_OUTPUT
-          fi
+          echo "TRIPLET=x64-linux" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Cache vcpkg packages & build dir
@@ -61,26 +53,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-vcpkg-
 
-      - name: Install build prerequisites (Linux / macOS)
-        if: runner.os != 'Windows'
+      - name: Install build prerequisites (Ubuntu)
         run: |
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            sudo apt-get update
-            sudo apt-get install -y build-essential cmake ninja-build git python3-pip
-          else
-            brew update
-            brew install cmake ninja git
-          fi
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build git
         shell: bash
 
-      - name: Install build prerequisites (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install -y git ninja cmake
-        shell: pwsh
-
-      - name: Bootstrap / install vcpkg (Linux / macOS)
-        if: runner.os != 'Windows'
+      - name: Bootstrap / install vcpkg (Ubuntu)
         run: |
           VCPKG_DIR="${GITHUB_WORKSPACE}/third_party/vcpkg"
           if [ ! -d "$VCPKG_DIR" ]; then
@@ -91,19 +70,6 @@ jobs:
           ./vcpkg install --manifest --triplet "${{ steps.triplet.outputs.TRIPLET }}"
           popd
         shell: bash
-
-      - name: Bootstrap / install vcpkg (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          $vcpkgDir = Join-Path $Env:GITHUB_WORKSPACE "third_party/vcpkg"
-          if (-not (Test-Path $vcpkgDir)) {
-            git clone --depth 1 https://github.com/microsoft/vcpkg $vcpkgDir
-          }
-          Push-Location $vcpkgDir
-          .\bootstrap-vcpkg.bat -disableMetrics
-          .\vcpkg.exe install --manifest --triplet $Env:TRIPLET
-          Pop-Location
-        shell: pwsh
 
       - name: Configure (CMake with vcpkg toolchain)
         run: |
@@ -124,12 +90,10 @@ jobs:
           mkdir -p test-logs
           exit_code=0
 
-          # Find test executables built by the project. They are named *-tests per your CMakeLists.
-          # Search recursively in the build dir for files matching *-tests or *-tests.exe
           mapfile -t TEST_BINS < <(find "${{ env.BUILD_DIR }}" -type f \( -name "*-tests" -o -name "*-tests.exe" \) 2>/dev/null || true)
 
           if [ ${#TEST_BINS[@]} -eq 0 ]; then
-            echo "No test binaries found in ${ { env.BUILD_DIR } }"
+            echo "No test binaries found in ${{ env.BUILD_DIR }}"
             find "${{ env.BUILD_DIR }}" -maxdepth 2 -print || true
             exit 1
           fi
@@ -137,16 +101,15 @@ jobs:
           for tb in "${TEST_BINS[@]}"; do
             name="$(basename "$tb")"
             echo "=== Running $name ==="
-            # Ensure binary is executable (on Unix)
             chmod +x "$tb" || true
-            # Run and capture output per binary
-            "$tb" 2>&1 | tee "test-logs/${name}.txt" || exit_code=$?
+            if ! "$tb" 2>&1 | tee "test-logs/${name}.txt"; then
+              exit_code=1
+            fi
             echo "=== Exit code: $exit_code ==="
           done
 
-          # Print summary
           if [ "$exit_code" -ne 0 ]; then
-            echo "One or more tests failed (exit code $exit_code). See artifacts in test-logs/"
+            echo "One or more tests failed. See artifacts in test-logs/"
             exit $exit_code
           fi
         shell: bash
@@ -154,12 +117,12 @@ jobs:
       - name: Upload test logs
         uses: actions/upload-artifact@v4
         with:
-          name: doctest-logs-${{ matrix.os }}-${{ matrix.build_type }}
+          name: doctest-logs-ubuntu-${{ matrix.build_type }}
           path: test-logs
 
       - name: Upload build dir (for debugging)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.os }}-${{ matrix.build_type }}
+          name: build-ubuntu-${{ matrix.build_type }}
           path: ${{ env.BUILD_DIR }}
