@@ -17,14 +17,14 @@ void PeerManager::start() const {
     }
 };
 
-std::vector<PeerManager::Peer>
+std::vector<core::Peer>
 PeerManager::_deserializePeerBuffer(const std::vector<std::array<uint8_t, 6>>& peerBuffer) {
-    std::vector<Peer> peers;
+    std::vector<core::Peer> peers;
     spdlog::debug("Deserializing peer buffer...");
 
     for (const auto& peer : peerBuffer) {
         const auto iter = peer.begin();
-        IpAddr ip;
+        core::IpAddr ip;
         std::copy_n(iter, 4, ip.data());
 
         uint16_t port = static_cast<uint16_t>((static_cast<uint16_t>(peer[4]) << 8) |

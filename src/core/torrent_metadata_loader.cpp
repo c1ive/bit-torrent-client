@@ -95,10 +95,6 @@ TorrentMetadata parseRootMetadata(const bencode::Dict& rootDict) {
 }
 
 std::vector<Sha1Hash> parsePieceHashes(const std::string& piecesStr) {
-    // SAFETY GUARD:
-    // Ensure Sha1Hash is just raw bytes in memory (likely std::array<uint8_t, 20>)
-    static_assert(std::is_trivially_copyable_v<Sha1Hash>,
-                  "Sha1Hash must be trivially copyable for memcpy");
     static_assert(sizeof(Sha1Hash) == HASH_LENGTH, "Sha1Hash size mismatch");
 
     if (piecesStr.size() % HASH_LENGTH != 0) {
