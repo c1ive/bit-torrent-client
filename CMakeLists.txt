@@ -11,7 +11,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --- Dependencies from vcpkg ---
-find_package(Boost CONFIG REQUIRED COMPONENTS url)
+find_package(asio CONFIG REQUIRED)
+find_package(ada CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(argparse CONFIG REQUIRED)
@@ -30,8 +31,8 @@ target_include_directories(bt_core PUBLIC
 
 target_link_libraries(bt_core PUBLIC 
     spdlog::spdlog
-    Boost::boost
-    Boost::url
+    ada::ada
+     
     cpr::cpr
     argparse::argparse
 )

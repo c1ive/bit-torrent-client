@@ -2,7 +2,7 @@
 #include "bencode_parser.hpp"
 
 #include <array>
-#include <boost/uuid/detail/sha1.hpp>
+#include <openssl/sha.h>
 #include <cstdint>
 #include <filesystem>
 #include <string>

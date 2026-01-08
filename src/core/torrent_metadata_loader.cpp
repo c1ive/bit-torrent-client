@@ -2,7 +2,6 @@
 #include "core/bencode_parser.hpp"
 
 #include <algorithm>
-#include <boost/uuid/detail/sha1.hpp>
 #include <chrono>
 #include <fstream>
 #include <spdlog/fmt/bin_to_hex.h>
@@ -127,10 +126,8 @@ Sha1Hash calculateInfoHash(const TorrentMetadata::Info& infoDictData) {
 
     const auto& encodedInfo = bencode::encode(infoDict);
 
-    boost::uuids::detail::sha1 sha1;
-    boost::uuids::detail::sha1::digest_type hash;
-    sha1.process_bytes(encodedInfo.data(), encodedInfo.size());
-    sha1.get_digest(hash);
+    unsigned char hash[HASH_LENGTH];
+    SHA1(encodedInfo.data(), encodedInfo.size(), hash);
 
     Sha1Hash infoHash;
     std::copy_n(hash, 20, infoHash.begin());

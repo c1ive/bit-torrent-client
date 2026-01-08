@@ -2,6 +2,9 @@
 #include "core/tracker_communicator.hpp"
 #include "core/bencode_parser.hpp"
 #include "core/torrent_metadata_loader.hpp"
+#include <ada.h>
+#include <ada/url_aggregator.h>
+#include <ada/url_search_params.h>
 #include <cpr/response.h>
 #include <cstdint>
 #include <random>
@@ -18,9 +21,9 @@ TrackerResponse announceAndGetPeers(const TorrentMetadata& metadata) {
     const auto peerId = detail::generateId(20);
     spdlog::debug("Successfully generated a random id: {}", peerId);
     const auto url = detail::buildTrackerUrl(metadata, peerId);
-    spdlog::debug("Built the tracker url: {}", url.data());
+    spdlog::debug("Built the tracker url: {}", url);
 
-    const auto resp = detail::announceToTracker(url.buffer());
+    const auto resp = detail::announceToTracker(url);
     const auto trackerR = detail::parseTrackerResponse(resp.text);
     detail::debugLogTrackerResponse(trackerR);
 
@@ -28,22 +31,27 @@ TrackerResponse announceAndGetPeers(const TorrentMetadata& metadata) {
 }
 
 namespace detail {
-boost::urls::url buildTrackerUrl(const TorrentMetadata& metadata, std::string_view peerId) {
-    using namespace boost;
+std::string buildTrackerUrl(const TorrentMetadata& metadata, std::string_view peerId) {
 
     std::string_view infoHashView(reinterpret_cast<const char*>(metadata.infoHash.data()),
                                   metadata.infoHash.size());
+    auto finalUrl = ada::parse(metadata.announce);
 
-    urls::url finalUrl(metadata.announce);
-    finalUrl.set_params({{"info_hash", infoHashView},
-                         {"peer_id", peerId},
-                         {"uploaded", "0"},
-                         {"downloaded", "0"},
-                         {"compact", "1"},
-                         {"left", std::to_string(metadata.info.fileLength)}});
+    ada::url_search_params params;
 
-    finalUrl.normalize();
-    return finalUrl;
+    params.append("info_hash", infoHashView);
+    params.append("peer_id", peerId);
+    params.append("uploaded", "0");
+    params.append("downloaded", "0");
+    params.append("compact", "1");
+    params.append("left", std::to_string(metadata.info.fileLength));
+
+    finalUrl->set_search(params.to_string());
+    if (finalUrl.has_value()) {
+        return std::string{finalUrl.value().get_href()};
+    } else {
+        throw std::runtime_error{"Failed to build tracker URL"};
+    }
 }
 std::string generateId(int length) {
     const std::string characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

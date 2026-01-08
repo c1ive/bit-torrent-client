@@ -40,7 +40,7 @@ TEST_CASE("buildTrackerUrl includes required parameters") {
     const auto trackerUrl = bt::core::detail::buildTrackerUrl(metadata, peerId);
 
     // Boost URL stores encoded URL in its buffer
-    const std::string urlStr = std::string(trackerUrl.buffer());
+    const std::string urlStr = std::string(trackerUrl);
 
     CHECK(urlStr.find("info_hash=") != std::string::npos);
     CHECK(urlStr.find("peer_id=") != std::string::npos);

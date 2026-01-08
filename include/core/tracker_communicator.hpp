@@ -1,5 +1,6 @@
 #pragma once
-#include <boost/url.hpp>
+
+#include <ada.h>
 #include <cpr/cpr.h>
 #include <cpr/response.h>
 #include <string>
@@ -96,7 +97,7 @@ TrackerResponse announceAndGetPeers(const TorrentMetadata& metadata);
 
 namespace detail {
 std::string generateId(int length);
-boost::urls::url buildTrackerUrl(const TorrentMetadata& metadata, std::string_view peerId);
+std::string buildTrackerUrl(const TorrentMetadata& metadata, std::string_view peerId);
 cpr::Response announceToTracker(std::string_view url);
 TrackerResponse parseTrackerResponse(const std::string_view response);
 std::vector<std::array<uint8_t, 6>> toSixByteArrays(std::string_view blob);

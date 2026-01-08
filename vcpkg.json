@@ -2,9 +2,9 @@
   "name": "bit-torrent-client",
   "version": "0.1.0",
   "dependencies": [
-    "boost-url",
-    "boost-uuid",
-    "boost-asio",
+    "ada-url",
+    "asio",
+    "openssl",
     "cpr",
     "spdlog",
     "argparse",
