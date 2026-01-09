@@ -13,6 +13,14 @@ void PeerManager::start() const {
     for (const auto& peer : _peers) {
         spdlog::debug("Found Peer: {}:{}", peer.getIpStr(), peer.port);
     }
+
+    try {
+        auto connection = bt::core::connectWithPeer(_peers[0]);
+        spdlog::info("Successfully connected to peer {}:{}", _peers[0].getIpStr(), _peers[0].port);
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to connect to peer {}:{} - {}", _peers[0].getIpStr(), _peers[0].port,
+                      e.what());
+    }
 };
 
 std::vector<core::Peer>

@@ -1,4 +1,5 @@
 #include <array>
+#include <asio/io_context.hpp>
 #include <cstdint>
 
 #include <asio.hpp>
@@ -22,7 +23,7 @@ struct Peer {
 
 class ConnectionHandle {
 public:
-    explicit ConnectionHandle(asio::io_context& io);
+    ConnectionHandle(const Peer& peer);
 
     asio::ip::tcp::socket& socket();
 
@@ -39,6 +40,7 @@ public:
     ConnectionHandle& operator=(ConnectionHandle&& other) noexcept;
 
 private:
+    asio::io_context _ctx;
     asio::ip::tcp::socket _socket;
 };
 
@@ -55,5 +57,6 @@ private:
     ConnectionHandle& _handle;
 };
 
-PeerSession connectWithPeer(Peer& peer);
+std::unique_ptr<ConnectionHandle> connectWithPeer(const Peer& peer);
+PeerSession startPeerSession(ConnectionHandle& handle);
 }; // namespace bt::core

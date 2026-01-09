@@ -22,6 +22,7 @@ find_package(doctest CONFIG REQUIRED)
 add_library(bt_core STATIC
     src/core/torrent_metadata_loader.cpp
     src/core/bencode_parser.cpp
+    src/core/peer_communicator.cpp
     src/core/tracker_communicator.cpp
 )
 
@@ -32,7 +33,6 @@ target_include_directories(bt_core PUBLIC
 target_link_libraries(bt_core PUBLIC 
     spdlog::spdlog
     ada::ada
-     
     cpr::cpr
     argparse::argparse
 )
