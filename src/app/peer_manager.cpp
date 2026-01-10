@@ -1,25 +1,37 @@
 #include "app/peer_manager.hpp"
+#include "core/torrent_metadata_loader.hpp"
 #include <algorithm>
+#include <asio/detail/handler_work.hpp>
 #include <cstdint>
 #include <spdlog/spdlog.h>
 #include <vector>
 
 namespace bt {
-PeerManager::PeerManager(std::vector<std::array<uint8_t, 6>> peerBuffer)
-    : _peers{_deserializePeerBuffer(peerBuffer)} {}
+PeerManager::PeerManager(std::vector<std::array<uint8_t, 6>> peerBuffer, core::Sha1Hash& infoHash,
+                         std::string_view peerId)
+    : _peers{_deserializePeerBuffer(peerBuffer)}, _ctx(), _infoHash(infoHash), _peerId(peerId) {}
 
-void PeerManager::start() const {
+void PeerManager::start() {
     spdlog::debug("Starting the peer manager...");
     for (const auto& peer : _peers) {
         spdlog::debug("Found Peer: {}:{}", peer.getIpStr(), peer.port);
     }
 
-    try {
-        auto connection = bt::core::connectWithPeer(_peers[0]);
-        spdlog::info("Successfully connected to peer {}:{}", _peers[0].getIpStr(), _peers[0].port);
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to connect to peer {}:{} - {}", _peers[0].getIpStr(), _peers[0].port,
-                      e.what());
+    // Create a new PeerSession
+    core::PeerSession session(_ctx);
+
+    if (session.connect(_peers[0])) {
+        spdlog::info("Connected to peer! Sending handshake...");
+
+        // 2. Run the test (Send data + Block until response received)
+        try {
+            session.doHandshake(_infoHash, _peerId);
+            spdlog::info("Handshake executed successfully.");
+        } catch (const std::exception& e) {
+            spdlog::error("Error during handshake test: {}", e.what());
+        }
+    } else {
+        spdlog::error("Failed to connect to peer.");
     }
 };
 

@@ -15,10 +15,9 @@
 
 namespace bt::core {
 
-TrackerResponse announceAndGetPeers(const TorrentMetadata& metadata) {
+TrackerResponse announceAndGetPeers(const TorrentMetadata& metadata, std::string_view peerId) {
     spdlog::debug("Announcing to tracker: {}", metadata.announce);
 
-    const auto peerId = detail::generateId(20);
     spdlog::debug("Successfully generated a random id: {}", peerId);
     const auto url = detail::buildTrackerUrl(metadata, peerId);
     spdlog::debug("Built the tracker url: {}", url);
@@ -28,6 +27,20 @@ TrackerResponse announceAndGetPeers(const TorrentMetadata& metadata) {
     detail::debugLogTrackerResponse(trackerR);
 
     return trackerR;
+}
+
+std::string generateId(int length) {
+    const std::string characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    std::random_device random_device;
+    std::mt19937 generator(random_device());
+    std::uniform_int_distribution<> distribution(0, characters.size() - 1);
+
+    std::string random_string;
+    for (size_t i = 0; i < length; ++i) {
+        random_string += characters[distribution(generator)];
+    }
+
+    return random_string;
 }
 
 namespace detail {
@@ -52,19 +65,6 @@ std::string buildTrackerUrl(const TorrentMetadata& metadata, std::string_view pe
     } else {
         throw std::runtime_error{"Failed to build tracker URL"};
     }
-}
-std::string generateId(int length) {
-    const std::string characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    std::random_device random_device;
-    std::mt19937 generator(random_device());
-    std::uniform_int_distribution<> distribution(0, characters.size() - 1);
-
-    std::string random_string;
-    for (size_t i = 0; i < length; ++i) {
-        random_string += characters[distribution(generator)];
-    }
-
-    return random_string;
 }
 
 cpr::Response announceToTracker(std::string_view url) {

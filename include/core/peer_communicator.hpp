@@ -1,3 +1,6 @@
+#pragma once
+
+#include "core/torrent_metadata_loader.hpp"
 #include <array>
 #include <asio/io_context.hpp>
 #include <cstdint>
@@ -6,9 +9,27 @@
 #include <format>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <string_view>
 
 namespace bt::core {
 typedef std::array<uint8_t, 4> IpAddr;
+typedef std::array<uint8_t, 68> HandshakeMsg;
+
+namespace msg {
+constexpr uint8_t LEN = 0x13;
+constexpr const char* PROTOCOL = "BitTorrent protocol";
+constexpr uint64_t RESERVED = 0;
+} // namespace msg
+
+#pragma pack(push, 1)
+struct HandshakePacket {
+    uint8_t pstrlen;
+    char pstr[19];
+    uint8_t reserved[8];
+    uint8_t info_hash[20];
+    char peer_id[20];
+};
+#pragma pack(pop)
 
 struct Peer {
     uint16_t port;
@@ -21,42 +42,26 @@ struct Peer {
     }
 };
 
-class ConnectionHandle {
-public:
-    ConnectionHandle(const Peer& peer);
-
-    asio::ip::tcp::socket& socket();
-
-    bool isOpen() const;
-
-    void close();
-
-    // non-copyable, movable
-    ConnectionHandle(const ConnectionHandle&) = delete;
-    ConnectionHandle& operator=(const ConnectionHandle&) = delete;
-
-    ConnectionHandle(ConnectionHandle&& other) noexcept;
-
-    ConnectionHandle& operator=(ConnectionHandle&& other) noexcept;
-
-private:
-    asio::io_context _ctx;
-    asio::ip::tcp::socket _socket;
-};
-
 class PeerSession {
 public:
-    PeerSession(ConnectionHandle& handle);
+    explicit PeerSession(asio::io_context& io_context);
 
-    void doHandshake(const Peer& peer);
+    // Returns true on success, false on failure
+    bool connect(const Peer& peer);
+
+    void doHandshake(core::Sha1Hash& infoHash, std::string_view peerId);
     void requestPiece(int index, int offset, int length);
     void readMessage();
-    void writeMessage(...);
+    // void writeMessage(...);
+
+    // Helper to check connection status
+    bool isOpen() const {
+        return _socket.is_open();
+    }
 
 private:
-    ConnectionHandle& _handle;
-};
+    asio::ip::tcp::socket _socket;
 
-std::unique_ptr<ConnectionHandle> connectWithPeer(const Peer& peer);
-PeerSession startPeerSession(ConnectionHandle& handle);
+    HandshakeMsg _serializeHandshake(core::Sha1Hash& infoHash, std::string_view peerId);
+};
 }; // namespace bt::core

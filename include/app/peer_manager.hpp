@@ -1,17 +1,27 @@
+#pragma once
 #include "core/peer_communicator.hpp"
+#include "core/torrent_metadata_loader.hpp"
 #include <array>
+#include <asio/detail/handler_work.hpp>
+#include <asio/io_context.hpp>
 #include <cstdint>
 #include <vector>
 
 namespace bt {
 class PeerManager {
 public:
-    explicit PeerManager(std::vector<std::array<uint8_t, 6>> peerBuffer);
+    PeerManager(std::vector<std::array<uint8_t, 6>> peerBuffer, core::Sha1Hash& infoHash,
+                std::string_view peerId);
     ~PeerManager() = default;
 
-    void start() const;
+    void start();
 
 private:
+    asio::io_context _ctx;
+
+    core::Sha1Hash& _infoHash;
+    std::string_view _peerId;
+
     std::vector<core::Peer> _peers;
     static std::vector<core::Peer>
     _deserializePeerBuffer(const std::vector<std::array<uint8_t, 6>>& peerBuffer);

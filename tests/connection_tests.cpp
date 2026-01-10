@@ -17,7 +17,7 @@ std::filesystem::path fixtureTorrentPath() {
 
 TEST_CASE("generateId produces correct length and charset") {
     constexpr int len = 20;
-    const auto id = bt::core::detail::generateId(len);
+    const auto id = bt::core::generateId(len);
     REQUIRE(id.size() == static_cast<size_t>(len));
 
     // Allowed characters set used in implementation
@@ -35,7 +35,7 @@ TEST_CASE("buildTrackerUrl includes required parameters") {
                     "Fixture torrent missing: " << torrentPath.string());
 
     const auto metadata = bt::core::parseTorrentData(torrentPath.string());
-    const auto peerId = bt::core::detail::generateId(20);
+    const auto peerId = bt::core::generateId(20);
 
     const auto trackerUrl = bt::core::detail::buildTrackerUrl(metadata, peerId);
 

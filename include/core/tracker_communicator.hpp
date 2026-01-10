@@ -93,10 +93,10 @@ struct TrackerResponse {
     std::vector<std::array<uint8_t, 6>> peersBlob;
 };
 
-TrackerResponse announceAndGetPeers(const TorrentMetadata& metadata);
+TrackerResponse announceAndGetPeers(const TorrentMetadata& metadata, std::string_view id);
+std::string generateId(int length);
 
 namespace detail {
-std::string generateId(int length);
 std::string buildTrackerUrl(const TorrentMetadata& metadata, std::string_view peerId);
 cpr::Response announceToTracker(std::string_view url);
 TrackerResponse parseTrackerResponse(const std::string_view response);

@@ -9,7 +9,7 @@ class TorrentOrchestrator {
 private:
     bt::core::TorrentMetadata _metadata;
 
-    std::optional<bt::PeerManager> _peerManager;
+    std::unique_ptr<bt::PeerManager> _peerManager;
     // PiecesManager
     //...
 
