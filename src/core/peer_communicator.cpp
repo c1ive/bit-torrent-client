@@ -37,7 +37,7 @@ void PeerSession::doHandshake(core::Sha1Hash& infoHash, std::string_view peerId)
 
     std::array<uint8_t, 256> answer{};
     _socket.read_some(asio::buffer(answer));
-    spdlog::debug("Read some bytes from peer: {}", answer.data());
+    spdlog::debug("Read {} bytes from peer", answer.size());
 
     spdlog::debug("Handshake completed.");
 }
