@@ -28,7 +28,7 @@ bool PeerSession::connect(const Peer& peer) {
     return true;
 }
 
-void PeerSession::doHandshake(core::Sha1Hash& infoHash, std::string_view peerId) {
+void PeerSession::doHandshake(const core::Sha1Hash& infoHash, std::string_view peerId) {
     spdlog::debug("Performing handshake...");
     HandshakeMsg handshake = _serializeHandshake(infoHash, peerId);
 

@@ -49,7 +49,7 @@ public:
     // Returns true on success, false on failure
     bool connect(const Peer& peer);
 
-    void doHandshake(core::Sha1Hash& infoHash, std::string_view peerId);
+    void doHandshake(const core::Sha1Hash& infoHash, std::string_view peerId);
     // void requestPiece(int index, int offset, int length);
     // void readMessage();
     //  void writeMessage(...);

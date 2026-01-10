@@ -18,11 +18,10 @@ public:
 
 private:
     asio::io_context _ctx;
-
+    std::vector<core::Peer> _peers;
     core::Sha1Hash& _infoHash;
     std::string_view _peerId;
 
-    std::vector<core::Peer> _peers;
     static std::vector<core::Peer>
     _deserializePeerBuffer(const std::vector<std::array<uint8_t, 6>>& peerBuffer);
 };

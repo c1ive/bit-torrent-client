@@ -9,7 +9,7 @@
 namespace bt {
 PeerManager::PeerManager(std::vector<std::array<uint8_t, 6>> peerBuffer, core::Sha1Hash& infoHash,
                          std::string_view peerId)
-    : _peers{_deserializePeerBuffer(peerBuffer)}, _ctx(), _infoHash(infoHash), _peerId(peerId) {}
+    : _ctx(), _peers{_deserializePeerBuffer(peerBuffer)}, _infoHash(infoHash), _peerId(peerId) {}
 
 void PeerManager::start() {
     spdlog::debug("Starting the peer manager...");
