@@ -4,7 +4,6 @@
 #include <asio/io_context.hpp>
 #include <asio/ip/tcp.hpp>
 #include <spdlog/spdlog.h>
-#include <string>
 
 using namespace asio::ip;
 using namespace asio;

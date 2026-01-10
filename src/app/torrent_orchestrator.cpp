@@ -16,7 +16,6 @@ void TorrentOrchestrator::start() {
     const auto trackerResponse = core::announceAndGetPeers(_metadata, peerId);
 
     // peer blob gets consumed when creating the peer manager
-    _peerManager =
-        std::make_unique<PeerManager>(trackerResponse.peersBlob, _metadata.infoHash, peerId);
+    _peerManager = std::make_unique<PeerManager>(trackerResponse.peersBlob, _metadata.infoHash, peerId);
     _peerManager->start();
 }
