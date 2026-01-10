@@ -42,11 +42,7 @@ void PeerSession::doHandshake(core::Sha1Hash& infoHash, std::string_view peerId)
     spdlog::debug("Handshake completed.");
 }
 
-HandshakeMsg PeerSession::_serializeHandshake(core::Sha1Hash& infoHash, std::string_view peerId) {
-    if (infoHash.size() != 20 || peerId.size() != 20) {
-        throw std::invalid_argument("InfoHash and PeerID must be exactly 20 bytes");
-    }
-
+HandshakeMsg _serializeHandshake(const core::Sha1Hash& infoHash, std::string_view peerId) {
     HandshakePacket pkg{};
 
     pkg.pstrlen = msg::LEN;

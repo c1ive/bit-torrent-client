@@ -50,18 +50,18 @@ public:
     bool connect(const Peer& peer);
 
     void doHandshake(core::Sha1Hash& infoHash, std::string_view peerId);
-    void requestPiece(int index, int offset, int length);
-    void readMessage();
-    // void writeMessage(...);
+    // void requestPiece(int index, int offset, int length);
+    // void readMessage();
+    //  void writeMessage(...);
 
     // Helper to check connection status
-    bool isOpen() const {
-        return _socket.is_open();
-    }
+    // bool isOpen() const {
+    //     return _socket.is_open();
+    // }
 
 private:
     asio::ip::tcp::socket _socket;
-
-    HandshakeMsg _serializeHandshake(core::Sha1Hash& infoHash, std::string_view peerId);
 };
+
+HandshakeMsg _serializeHandshake(const core::Sha1Hash& infoHash, std::string_view peerId);
 }; // namespace bt::core
