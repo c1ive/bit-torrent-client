@@ -3,6 +3,7 @@
 #include "core/torrent_metadata_loader.hpp"
 #include <array>
 #include <asio/io_context.hpp>
+#include <cstddef>
 #include <cstdint>
 
 #include <asio.hpp>
@@ -19,6 +20,7 @@ namespace msg {
 constexpr uint8_t LEN = 0x13;
 constexpr const char* PROTOCOL = "BitTorrent protocol";
 constexpr uint64_t RESERVED = 0;
+constexpr size_t HANDSHAKE_LEN = 68;
 } // namespace msg
 
 #pragma pack(push, 1)
@@ -42,6 +44,9 @@ struct Peer {
     }
 };
 
+HandshakeMsg serializeHandshake(const Sha1Hash& infoHash, std::string_view peerId);
+bool verifyHandshake(const HandshakeMsg& handshakeResponse, const Sha1Hash& expectedInfoHash);
+
 class PeerSession {
 public:
     explicit PeerSession(asio::io_context& io_context);
@@ -62,6 +67,4 @@ public:
 private:
     asio::ip::tcp::socket _socket;
 };
-
-HandshakeMsg _serializeHandshake(const core::Sha1Hash& infoHash, std::string_view peerId);
 }; // namespace bt::core

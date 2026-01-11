@@ -63,3 +63,8 @@ target_link_libraries(bt-metadata-loader-tests PRIVATE bt_core doctest::doctest)
 add_executable(bt-connection-tests tests/connection_tests.cpp)
 target_include_directories(bt-connection-tests PRIVATE ${TEST_INCLUDE_DIRS})
 target_link_libraries(bt-connection-tests PRIVATE bt_core doctest::doctest)
+
+# Peer communication tests
+add_executable(bt-peer-communication-tests tests/peer_communication_tests.cpp)
+target_include_directories(bt-peer-communication-tests PRIVATE ${TEST_INCLUDE_DIRS})
+target_link_libraries(bt-peer-communication-tests PRIVATE bt_core doctest::doctest)

@@ -58,9 +58,6 @@ TorrentMetadata::Info parseInfoDict(const bencode::Dict& infoDict) {
     const auto piecesStr = bencode::extractValueFromDict<std::string>(infoDict, DictKeys::PIECES);
     const auto pieceHashes = parsePieceHashes(piecesStr);
 
-    // DATA INTEGRITY
-    // Ensure we didn't lose or gain data during the vector conversion.
-    // The raw string size must match the vector size * hash length exactly.
     assert(piecesStr.size() == pieceHashes.size() * HASH_LENGTH);
 
     const auto fileLength = bencode::extractValueFromDict<int64_t>(infoDict, DictKeys::LENGTH);
@@ -108,11 +105,8 @@ std::vector<Sha1Hash> parsePieceHashes(const std::string& piecesStr) {
     const uint8_t* src = reinterpret_cast<const uint8_t*>(piecesStr.data());
     uint8_t* dst = reinterpret_cast<uint8_t*>(pieceHashes.data());
 
-    // Before performing a raw memory copy, strictly verify that the
-    // destination buffer size in bytes matches the source size.
-    // This protects against future logic errors in 'resize' or 'numHashes' calculation.
     assert(pieceHashes.size() * sizeof(Sha1Hash) == piecesStr.size());
-    std::memcpy(dst, src, piecesStr.size());
+    std::copy_n(src, piecesStr.size(), dst);
 
     return pieceHashes;
 }
