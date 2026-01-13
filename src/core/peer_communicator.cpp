@@ -7,51 +7,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <spdlog/spdlog.h>
-#include <stdexcept>
 
 using namespace asio::ip;
 using namespace asio;
 
 namespace bt::core {
-
-PeerSession::PeerSession(asio::io_context& io_context) : _socket(io_context) {}
-
-bool PeerSession::connect(const Peer& peer) {
-    asio::ip::tcp::endpoint endpoint(asio::ip::address::from_string(peer.getIpStr()), peer.port);
-    spdlog::debug("Connecting to peer at {}:{}", peer.getIpStr(), peer.port);
-
-    try {
-        _socket.connect(endpoint);
-        spdlog::debug("Successfully connected to peer at {}:{}", peer.getIpStr(), peer.port);
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to connect to peer at {}:{} - {}", peer.getIpStr(), peer.port,
-                      e.what());
-        return false;
-    }
-
-    return true;
-}
-
-void PeerSession::doHandshake(const core::Sha1Hash& infoHash, std::string_view peerId) {
-    spdlog::debug("Performing handshake...");
-    HandshakeMsg handshake = serializeHandshake(infoHash, peerId);
-
-    spdlog::debug("Sending buffer to peer.");
-    _socket.send(asio::buffer(handshake));
-
-    std::array<uint8_t, msg::HANDSHAKE_LEN> handshakeResponse{};
-    asio::read(_socket, asio::buffer(handshakeResponse));
-    spdlog::debug("Read {} bytes from peer", handshakeResponse.size());
-
-    if (!verifyHandshake(handshakeResponse, infoHash)) {
-        throw std::runtime_error{"Handshake verification failed."};
-    }
-
-    spdlog::debug("Handshake completed with {}:{}.",
-                  _socket.remote_endpoint().address().to_string(),
-                  _socket.remote_endpoint().port());
-}
-
 HandshakeMsg serializeHandshake(const core::Sha1Hash& infoHash, std::string_view peerId) {
     HandshakePacket pkg{};
 

@@ -46,25 +46,4 @@ struct Peer {
 
 HandshakeMsg serializeHandshake(const Sha1Hash& infoHash, std::string_view peerId);
 bool verifyHandshake(const HandshakeMsg& handshakeResponse, const Sha1Hash& expectedInfoHash);
-
-class PeerSession {
-public:
-    explicit PeerSession(asio::io_context& io_context);
-
-    // Returns true on success, false on failure
-    bool connect(const Peer& peer);
-
-    void doHandshake(const core::Sha1Hash& infoHash, std::string_view peerId);
-    // void requestPiece(int index, int offset, int length);
-    // void readMessage();
-    //  void writeMessage(...);
-
-    // Helper to check connection status
-    // bool isOpen() const {
-    //     return _socket.is_open();
-    // }
-
-private:
-    asio::ip::tcp::socket _socket;
-};
 }; // namespace bt::core
