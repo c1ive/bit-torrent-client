@@ -7,7 +7,7 @@
 namespace {
 std::filesystem::path fixtureTorrentPath() {
     static const auto path =
-        std::filesystem::path(__FILE__).parent_path() / "debian-13.2.0-arm64-netinst.iso.torrent";
+        std::filesystem::path(__FILE__).parent_path() / "debian-13.3.0-amd64-netinst.iso.torrent";
     return path;
 }
 
@@ -45,9 +45,9 @@ TEST_CASE("parseTorrentData reads Debian sample torrent") {
     CHECK(metadata.creationDate > 0);
     CHECK(metadata.info.fileLength > 0);
     CHECK(metadata.info.pieceLength > 0);
-    CHECK(metadata.info.fileName == "debian-13.2.0-arm64-netinst.iso");
+    CHECK(metadata.info.fileName == "debian-13.3.0-amd64-netinst.iso");
 
-    const auto expectedHash = hexToSha1("c24defaa5209b5730b09cc5c33f7b8b8e567c6b1");
+    const auto expectedHash = hexToSha1("86f635034839f1ebe81ab96bee4ac59f61db9dde");
     CHECK(metadata.infoHash == expectedHash);
     CHECK_FALSE(metadata.info.pieceHashes.empty());
 

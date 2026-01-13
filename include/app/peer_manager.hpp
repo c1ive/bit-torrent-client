@@ -8,14 +8,17 @@
 #include <vector>
 
 namespace bt {
+enum class PeerState { HANDSHAKE_COMPLETE, ERROR };
 class PeerSession {
 public:
     explicit PeerSession(asio::io_context& io_context);
 
-    // Returns true on success, false on failure
-    bool connect(const core::Peer& peer);
+    inline PeerState getState() {
+        return _state;
+    };
+    asio::awaitable<void> connect(const core::Peer& peer);
 
-    void doHandshake(const core::Sha1Hash& infoHash, std::string_view peerId);
+    asio::awaitable<void> doHandshake(const core::Sha1Hash& infoHash, std::string_view peerId);
     // void requestPiece(int index, int offset, int length);
     // void readMessage();
     //  void writeMessage(...);
@@ -26,6 +29,7 @@ public:
     // }
 
 private:
+    PeerState _state;
     asio::ip::tcp::socket _socket;
 };
 class PeerManager {

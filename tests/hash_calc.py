@@ -1,7 +1,7 @@
 import bencodepy
 import hashlib
 
-with open("debian-13.2.0-arm64-netinst.iso.torrent", "rb") as f:
+with open("debian-13.3.0-amd64-netinst.iso.torrent", "rb") as f:
     data = bencodepy.decode(f.read())
 
 info_bytes = bencodepy.encode(data[b"info"])
