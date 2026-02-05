@@ -20,6 +20,6 @@ void TorrentOrchestrator::start() {
         std::make_unique<PeerManager>(trackerResponse.peersBlob, _metadata.infoHash, peerId);
     _peerManager->start();
     spdlog::info("Peermanager successfully started.");
-    sleep(5);
+    sleep(20);
     _peerManager->stop();
 }
