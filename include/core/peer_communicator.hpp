@@ -8,7 +8,6 @@
 
 #include <asio.hpp>
 #include <format>
-#include <span>
 #include <spdlog/spdlog.h>
 #include <string>
 #include <string_view>

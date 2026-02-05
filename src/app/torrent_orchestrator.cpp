@@ -1,7 +1,6 @@
 #include "app/torrent_orchestrator.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include "core/tracker_communicator.hpp"
-#include <cstdlib>
 #include <spdlog/spdlog.h>
 #include <unistd.h>
 
