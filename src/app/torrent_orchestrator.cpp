@@ -1,7 +1,9 @@
 #include "app/torrent_orchestrator.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include "core/tracker_communicator.hpp"
+#include <cstdlib>
 #include <spdlog/spdlog.h>
+#include <unistd.h>
 
 using namespace bt;
 
@@ -18,4 +20,7 @@ void TorrentOrchestrator::start() {
     _peerManager =
         std::make_unique<PeerManager>(trackerResponse.peersBlob, _metadata.infoHash, peerId);
     _peerManager->start();
+    spdlog::info("Peermanager successfully started.");
+    sleep(5);
+    _peerManager->stop();
 }

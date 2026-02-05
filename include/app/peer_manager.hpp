@@ -8,30 +8,6 @@
 #include <vector>
 
 namespace bt {
-enum class PeerState { HANDSHAKE_COMPLETE, ERROR };
-class PeerSession {
-public:
-    explicit PeerSession(asio::io_context& io_context);
-
-    inline PeerState getState() {
-        return _state;
-    };
-    asio::awaitable<void> connect(const core::Peer& peer);
-
-    asio::awaitable<void> doHandshake(const core::Sha1Hash& infoHash, std::string_view peerId);
-    // void requestPiece(int index, int offset, int length);
-    // void readMessage();
-    //  void writeMessage(...);
-
-    // Helper to check connection status
-    // bool isOpen() const {
-    //     return _socket.is_open();
-    // }
-
-private:
-    PeerState _state;
-    asio::ip::tcp::socket _socket;
-};
 class PeerManager {
 public:
     PeerManager(std::vector<std::array<uint8_t, 6>> peerBuffer, core::Sha1Hash& infoHash,
@@ -39,12 +15,14 @@ public:
     ~PeerManager() = default;
 
     void start();
+    void stop();
 
 private:
     asio::io_context _ctx;
     std::vector<core::Peer> _peers;
     core::Sha1Hash& _infoHash;
     std::string_view _peerId;
+    std::thread _thread;
 
     static std::vector<core::Peer>
     _deserializePeerBuffer(const std::vector<std::array<uint8_t, 6>>& peerBuffer);

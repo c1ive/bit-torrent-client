@@ -1,4 +1,5 @@
 #include "app/peer_manager.hpp"
+#include "app/peer_session.hpp"
 #include "core/peer_communicator.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include <algorithm>
@@ -8,7 +9,6 @@
 #include <asio/write.hpp>
 #include <cstdint>
 #include <spdlog/spdlog.h>
-#include <stdexcept>
 #include <vector>
 
 namespace bt {
@@ -56,13 +56,14 @@ asio::awaitable<void> PeerSession::doHandshake(const core::Sha1Hash& infoHash,
 
     spdlog::debug("Read {} bytes from peer", bytes_transferred);
     if (ec2) {
-        spdlog::error("Failed to read handshake: {}", ec2.message());
+        spdlog::debug("Failed to read handshake: {}", ec2.message());
         _state = PeerState::ERROR;
         co_return;
     }
 
     if (!core::verifyHandshake(handshakeResponse, infoHash)) {
-        spdlog::error("Handshake verification failed.");
+        // Its verry common that a handshake with a peer fails, so its only logged in debug mode
+        spdlog::debug("Handshake verification failed.");
         _state = PeerState::ERROR;
         co_return;
     }
@@ -91,6 +92,7 @@ void PeerManager::start() {
                 try {
                     co_await session->connect(peer);
                     co_await session->doHandshake(_infoHash, _peerId);
+                    co_await session->run();
                 } catch (const std::exception& e) {
                     spdlog::warn("Peer session error: {}", e.what());
                 }
@@ -98,7 +100,13 @@ void PeerManager::start() {
             asio::detached);
     }
 
-    _ctx.run();
+    _thread = std::thread{[this] { _ctx.run(); }};
+}
+
+void PeerManager::stop() {
+    spdlog::info("Stopping peermanager...");
+    _ctx.stop();
+    _thread.join();
 }
 
 std::vector<core::Peer>

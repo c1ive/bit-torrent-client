@@ -8,6 +8,7 @@
 
 #include <asio.hpp>
 #include <format>
+#include <span>
 #include <spdlog/spdlog.h>
 #include <string>
 #include <string_view>
@@ -21,6 +22,18 @@ constexpr uint8_t LEN = 0x13;
 constexpr const char* PROTOCOL = "BitTorrent protocol";
 constexpr uint64_t RESERVED = 0;
 constexpr size_t HANDSHAKE_LEN = 68;
+
+enum class id : uint8_t {
+    CHOKE = 0,
+    UNCHOKE = 1,
+    INTERESTED = 2,
+    NOT_INTERESTED = 3,
+    HAVE = 4,
+    BITFIELD = 5,
+    REQUEST = 6,
+    PIECE = 7,
+    CANCEL = 8
+};
 } // namespace msg
 
 #pragma pack(push, 1)
@@ -46,4 +59,6 @@ struct Peer {
 
 HandshakeMsg serializeHandshake(const Sha1Hash& infoHash, std::string_view peerId);
 bool verifyHandshake(const HandshakeMsg& handshakeResponse, const Sha1Hash& expectedInfoHash);
+
+// void readMessage( std::span<typename Type, size_t Extent> )
 }; // namespace bt::core
