@@ -12,6 +12,19 @@ using namespace asio::ip;
 using namespace asio;
 
 namespace bt::core {
+void ByteWriter::write_u32(uint32_t val) {
+    uint32_t net = htonl(val);
+    const uint8_t* p = reinterpret_cast<const uint8_t*>(&net);
+    _data.insert(_data.end(), p, p + 4);
+}
+
+void ByteWriter::write_u8(uint8_t val) {
+    _data.push_back(val);
+}
+
+const std::vector<uint8_t>& ByteWriter::data() const {
+    return _data;
+}
 HandshakeMsg serializeHandshake(const core::Sha1Hash& infoHash, std::string_view peerId) {
     HandshakePacket pkg{};
 

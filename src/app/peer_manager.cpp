@@ -16,14 +16,14 @@ PeerManager::PeerManager(std::vector<std::array<uint8_t, 6>> peerBuffer, core::S
                          std::string_view peerId)
     : _ctx(), _peers{_deserializePeerBuffer(peerBuffer)}, _infoHash(infoHash), _peerId(peerId) {}
 
-void PeerManager::start() {
+void PeerManager::start(std::shared_ptr<PieceManager> pieceManager) {
     spdlog::debug("Starting the peer manager...");
     for (const auto& peer : _peers) {
         spdlog::debug("Found Peer: {}:{}", peer.getIpStr(), peer.port);
     }
 
     for (const auto& peer : _peers) {
-        auto session = std::make_shared<PeerSession>(_ctx);
+        auto session = std::make_shared<PeerSession>(_ctx, pieceManager);
 
         asio::co_spawn(
             _ctx,

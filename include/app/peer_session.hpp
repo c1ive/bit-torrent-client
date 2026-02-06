@@ -1,8 +1,12 @@
 #pragma once
 
+#include "app/piece_manager.hpp"
+#include "core/torrent_metadata_loader.hpp"
 #include <core/peer_communicator.hpp>
 
 #include <asio.hpp>
+#include <memory>
+#include <vector>
 
 namespace bt {
 enum class PeerState {
@@ -15,7 +19,7 @@ enum class PeerState {
 };
 class PeerSession {
 public:
-    explicit PeerSession(asio::io_context& io_context);
+    explicit PeerSession(asio::io_context& io_context, std::shared_ptr<PieceManager> pieceManager);
 
     // inline PeerState getState() {
     //     return _state;
@@ -37,9 +41,13 @@ private:
     bool _peer_interested = false; // Peer wants data from us
     PeerState _state;
     asio::ip::tcp::socket _socket;
+    std::shared_ptr<PieceManager> _pieceManager;
+    std::vector<uint8_t> _peerBitfield;
 
     asio::awaitable<uint32_t> _readMsgLen();
-    void _handleMessage(core::msg::id msg_id, std::span<uint8_t> payload);
+    void _handleBitfield(std::span<uint8_t> payload);
+    asio::awaitable<void> _handleMessage(core::msg::id msg_id, std::span<uint8_t> payload);
+    asio::awaitable<void> _requestBlock();
     inline void _setState(PeerState s) {
         _state = s;
     }

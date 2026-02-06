@@ -1,14 +1,18 @@
 #include "app/peer_session.hpp"
+#include "app/piece_manager.hpp"
 #include "core/peer_communicator.hpp"
+#include <algorithm>
 #include <asio/awaitable.hpp>
 #include <cstdint>
 #include <netinet/in.h>
+#include <optional>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 
 namespace bt {
 
-PeerSession::PeerSession(asio::io_context& io_context) : _socket(io_context) {}
+PeerSession::PeerSession(asio::io_context& io_context, std::shared_ptr<PieceManager> pieceManager)
+    : _socket(io_context), _pieceManager(pieceManager), _state(PeerState::CONNECTING) {}
 
 asio::awaitable<uint32_t> PeerSession::_readMsgLen() {
     uint32_t network_len = 0;
@@ -25,28 +29,76 @@ asio::awaitable<uint32_t> PeerSession::_readMsgLen() {
     co_return len;
 }
 
-void PeerSession::_handleMessage(core::msg::id msg_id, std::span<uint8_t> payload) {
+void PeerSession::_handleBitfield(std::span<uint8_t> payload) {
+    int pieces = _pieceManager->getTotalNumOfPieces();
+    size_t expected_size = (pieces + 7) / 8;
+
+    if (payload.size() != expected_size) {
+        spdlog::error("Peer sent malformed bitfield size: {} (expected {})", payload.size(),
+                      expected_size);
+        _setState(PeerState::ERROR);
+        return;
+    }
+
+    _peerBitfield.assign(payload.begin(), payload.end());
+
+    spdlog::info("Successfully loaded bitfield from peer.");
+}
+
+asio::awaitable<void> PeerSession::_requestBlock() {
+    std::optional<Block> block = _pieceManager->requestBlock(_peerBitfield);
+    if (!block) {
+        co_return;
+    }
+    core::ByteWriter msg;
+    msg.write_u32(13);
+    msg.write_u8(static_cast<uint8_t>(core::msg::id::REQUEST));
+    msg.write_u32(block->pieceIndex);
+    msg.write_u32(block->offset);
+    msg.write_u32(block->length);
+
+    auto [ec1, len] = co_await asio::async_write(_socket, asio::buffer(msg.data()),
+                                                 asio::as_tuple(asio::use_awaitable));
+    spdlog::info("Requesting block: pieceidx:{}, offset:{}, len{}", block->pieceIndex,
+                 block->offset, block->length);
+}
+
+asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
+                                                  std::span<uint8_t> payload) {
     using namespace core::msg;
     switch (msg_id) {
     case id::CHOKE:
         spdlog::debug("Peer choked us");
         _peer_choking = true;
         break;
-    case id::UNCHOKE:
+    case id::UNCHOKE: {
         spdlog::info("Peer unchoked us! We can request now.");
         _peer_choking = false;
-        // Trigger request logic here
-        break;
+        if (_state == PeerState::READY) {
+            co_await _requestBlock();
+        }
+    }; break;
     case id::HAVE:
         // Parse payload (4 bytes index) and update bitfield
         break;
-    case id::BITFIELD:
+    case id::BITFIELD: {
         spdlog::info("Received Bitfield of size {}", payload.size());
-        // Parse bitfield logic here
-        // Usually, you immediately send 'Interested' after processing this
+        _handleBitfield(payload);
+
+        // TODO: Only send when really interested, for now we just wantn everything
+        core::ByteWriter msg;
+        msg.write_u32(1);
+        msg.write_u8(static_cast<uint8_t>(id::INTERESTED));
+        auto [ec1, len] = co_await asio::async_write(_socket, asio::buffer(msg.data()),
+                                                     asio::as_tuple(asio::use_awaitable));
+
+        _setState(PeerState::READY);
         break;
+    }
     case id::PIECE:
-        // Handle incoming data block
+        spdlog::info("INCOMING BLOCK: LEN: {}", payload.size());
+        // TODO: Push block to piece manager
+        // TODO: Request new Block
         break;
     default:
         spdlog::debug("Received unknown or unhandled message ID: {}", static_cast<uint8_t>(msg_id));
@@ -86,7 +138,7 @@ asio::awaitable<void> PeerSession::run() {
             payload = std::span<uint8_t>(message_buffer.data() + 1, len - 1);
         }
 
-        _handleMessage(msg_id, payload);
+        co_await _handleMessage(msg_id, payload);
     }
 };
 

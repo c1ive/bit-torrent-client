@@ -1,4 +1,5 @@
 #pragma once
+#include "app/piece_manager.hpp"
 #include "core/peer_communicator.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include <array>
@@ -14,7 +15,7 @@ public:
                 std::string_view peerId);
     ~PeerManager() = default;
 
-    void start();
+    void start(std::shared_ptr<PieceManager> pieceManager);
     void stop();
 
 private:
