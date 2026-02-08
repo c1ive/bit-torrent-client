@@ -77,10 +77,7 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
     _pendingBlocks.erase(finishedBlock);
 
     if (pending.isFinished()) {
-        spdlog::debug("Piece {} assembly complete. Verifying...", idx);
-
         if (_verifyHash(idx, pending.data)) {
-            spdlog::debug("Piece {} verified successfully", idx);
             _fileHandler.writePiece(idx, data);
             _finished[idx] = true;
             _pendingPieces.erase(idx);
@@ -125,7 +122,6 @@ bool PieceManager::_verifyHash(uint32_t index, std::span<uint8_t> data) const {
 };
 
 bool PieceManager::isComplete() {
-    spdlog::info("finished:{}, total:{}", _piecesFinished, _metadata.info.pieceHashes.size());
     return _piecesFinished >= _metadata.info.pieceHashes.size();
 }
 

@@ -11,6 +11,7 @@
 #include <stdexcept>
 
 namespace bt {
+constexpr int MAX_PIPELINE_SIZE = 16;
 
 PeerSession::PeerSession(asio::io_context& io_context, std::shared_ptr<PieceManager> pieceManager)
     : _socket(io_context), _pieceManager(pieceManager), _state(PeerState::CONNECTING) {}
@@ -68,12 +69,15 @@ asio::awaitable<void> PeerSession::_requestBlock() {
     msg.write_u32(block->offset);
     msg.write_u32(block->length);
 
-    auto [ec1, len] = co_await asio::async_write(_socket, asio::buffer(msg.data()),
-                                                 asio::as_tuple(asio::use_awaitable));
-    // TODO: Check error
-    _pendingBlocks.push_back(block.value());
+    auto [ec1, len] = co_await _asyncWrite(msg.data());
+    if (ec1) {
+        co_await _returnBlocks();
+        co_return;
+    }
+
+    _pendingBlocks.insert(block.value());
     spdlog::debug("Requesting block: pieceidx:{}, offset:{}, len{}", block->pieceIndex,
-                 block->offset, block->length);
+                  block->offset, block->length);
 }
 
 asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
@@ -87,7 +91,8 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
     case id::UNCHOKE: {
         spdlog::debug("Peer unchoked us! We can request now.");
         _peer_choking = false;
-        if (_state == PeerState::READY) {
+        int needed = MAX_PIPELINE_SIZE - _pendingBlocks.size();
+        for (int i = 0; i < needed; ++i) {
             co_await _requestBlock();
         }
     }; break;
@@ -102,14 +107,12 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
         utils::ByteWriter msg;
         msg.write_u32(1);
         msg.write_u8(static_cast<uint8_t>(id::INTERESTED));
-        auto [ec1, len] = co_await asio::async_write(_socket, asio::buffer(msg.data()),
-                                                     asio::as_tuple(asio::use_awaitable));
+        auto [ec1, len] = co_await _asyncWrite(msg.data());
 
         _setState(PeerState::READY);
         break;
     }
     case id::PIECE: {
-        // TODO: Push block to piece manager
         utils::ByteReader reader{payload};
         uint32_t index = reader.readU32();
         uint32_t offset = reader.readU32();
@@ -117,11 +120,17 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
 
         if (!_pieceManager->deliverBlock(index, offset, reader.readRemaining())) {
             co_return;
-            // Varification failed -> drop peer
         }
 
-        // Request a new block
-        co_await _requestBlock();
+        _pendingBlocks.erase(Block{.pieceIndex = index,
+                                   .offset = offset,
+                                   .length = static_cast<uint32_t>(payload.size() - 8)});
+
+        // Pipline request a new block
+        int needed = MAX_PIPELINE_SIZE - _pendingBlocks.size();
+        for (int i = 0; i < needed; ++i) {
+            co_await _requestBlock();
+        }
     } break;
     default:
         spdlog::debug("Received unknown or unhandled message ID: {}", static_cast<uint8_t>(msg_id));
@@ -189,8 +198,7 @@ asio::awaitable<void> PeerSession::doHandshake(const core::Sha1Hash& infoHash,
     core::HandshakeMsg handshake = core::serializeHandshake(infoHash, peerId);
 
     spdlog::debug("Sending buffer to peer.");
-    auto [ec1, len] = co_await asio::async_write(_socket, asio::buffer(handshake),
-                                                 asio::as_tuple(asio::use_awaitable));
+    auto [ec1, len] = co_await _asyncWrite(handshake);
     if (ec1) {
         spdlog::error("Sending handshake failed: {}", ec1.message());
         _state = PeerState::ERROR;
@@ -224,5 +232,10 @@ asio::awaitable<void> PeerSession::doHandshake(const core::Sha1Hash& infoHash,
 
     spdlog::info("Handshake successfully completed with {}:{}.",
                  _socket.remote_endpoint().address().to_string(), _socket.remote_endpoint().port());
+}
+
+asio::awaitable<std::tuple<std::error_code, unsigned long>, asio::any_io_executor>
+PeerSession::_asyncWrite(const std::span<const uint8_t> data) {
+    return asio::async_write(_socket, asio::buffer(data), asio::as_tuple(asio::use_awaitable));
 }
 } // namespace bt

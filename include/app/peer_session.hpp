@@ -43,7 +43,7 @@ private:
     asio::ip::tcp::socket _socket;
     std::shared_ptr<PieceManager> _pieceManager;
     std::vector<uint8_t> _peerBitfield;
-    std::vector<Block> _pendingBlocks;
+    std::set<Block> _pendingBlocks;
 
     asio::awaitable<uint32_t> _readMsgLen();
     void _handleBitfield(std::span<uint8_t> payload);
@@ -53,5 +53,8 @@ private:
     inline void _setState(PeerState s) {
         _state = s;
     }
+
+    asio::awaitable<std::tuple<std::error_code, unsigned long>, asio::any_io_executor>
+    _asyncWrite(const std::span<const uint8_t> data);
 };
 } // namespace bt
