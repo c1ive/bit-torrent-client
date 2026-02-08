@@ -26,7 +26,10 @@ std::optional<Block> PieceManager::requestBlock(std::vector<uint8_t>& peer_bitfi
             for (int bit = 7; bit >= 0; --bit) {
                 if ((needed >> bit) & 1) {
                     uint32_t piece_index = (i * 8) + (7 - bit);
-                    return _getNextBlockForPiece(piece_index);
+                    auto block = _getNextBlockForPiece(piece_index);
+                    if (block) {
+                        return block;
+                    }
                 }
             }
         }
@@ -73,9 +76,10 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
 
         if (_verifyHash(idx, pending.data)) {
             spdlog::info("Piece {} verified successfully", idx);
-            //_writeToDisk(piece_index, pending.data);
+            // TODO: _writeToDisk(piece_index, pending.data);
             _finished[idx] = true;
             _pendingPieces.erase(idx);
+            _setPiece(idx);
             spdlog::info("Piece {} Verified and Written to Disk!", idx);
             return true;
         } else {
