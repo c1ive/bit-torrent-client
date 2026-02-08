@@ -45,6 +45,7 @@ add_executable(bit-torrent-client
     src/app/peer_manager.cpp    
     src/app/peer_session.cpp
     src/app/piece_manager.cpp
+    src/app/file_handler.cpp
 )
 
 target_link_libraries(bit-torrent-client PRIVATE bt_core)

@@ -36,7 +36,7 @@ void PeerSession::_handleBitfield(std::span<uint8_t> payload) {
     size_t expected_size = (pieces + 7) / 8;
 
     if (payload.size() != expected_size) {
-        spdlog::error("Peer sent malformed bitfield size: {} (expected {})", payload.size(),
+        spdlog::debug("Peer sent malformed bitfield size: {} (expected {})", payload.size(),
                       expected_size);
         _setState(PeerState::ERROR);
         return;
@@ -50,7 +50,7 @@ void PeerSession::_handleBitfield(std::span<uint8_t> payload) {
 asio::awaitable<void> PeerSession::_returnBlocks() {
     for (const auto& block : _pendingBlocks) {
         if (!_pieceManager->returnBlock(block)) {
-            spdlog::info("Failed to return block");
+            spdlog::debug("Failed to return block");
         }
     }
     co_return;
@@ -72,7 +72,7 @@ asio::awaitable<void> PeerSession::_requestBlock() {
                                                  asio::as_tuple(asio::use_awaitable));
     // TODO: Check error
     _pendingBlocks.push_back(block.value());
-    spdlog::info("Requesting block: pieceidx:{}, offset:{}, len{}", block->pieceIndex,
+    spdlog::debug("Requesting block: pieceidx:{}, offset:{}, len{}", block->pieceIndex,
                  block->offset, block->length);
 }
 
@@ -85,7 +85,7 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
         _peer_choking = true;
         break;
     case id::UNCHOKE: {
-        spdlog::info("Peer unchoked us! We can request now.");
+        spdlog::debug("Peer unchoked us! We can request now.");
         _peer_choking = false;
         if (_state == PeerState::READY) {
             co_await _requestBlock();
@@ -95,7 +95,7 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
         // Parse payload (4 bytes index) and update bitfield
         break;
     case id::BITFIELD: {
-        spdlog::info("Received Bitfield of size {}", payload.size());
+        spdlog::debug("Received Bitfield of size {}", payload.size());
         _handleBitfield(payload);
 
         // TODO: Only send when really interested, for now we just wantn everything
@@ -113,7 +113,7 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
         utils::ByteReader reader{payload};
         uint32_t index = reader.readU32();
         uint32_t offset = reader.readU32();
-        spdlog::info("Block incoming: len:{}, idx:{}, offset:{}", payload.size(), index, offset);
+        spdlog::debug("Block incoming: len:{}, idx:{}, offset:{}", payload.size(), index, offset);
 
         if (!_pieceManager->deliverBlock(index, offset, reader.readRemaining())) {
             co_return;

@@ -1,9 +1,11 @@
 #pragma once
 
+#include "app/file_handler.hpp"
 #include "core/torrent_metadata_loader.hpp"
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <mutex>
 #include <openssl/sha.h>
 #include <optional>
@@ -48,6 +50,7 @@ public:
     };
 
 private:
+    FileHandler _fileHandler;
     core::TorrentMetadata _metadata;
     std::vector<uint8_t> _bitfield;
     std::mutex _mutex;

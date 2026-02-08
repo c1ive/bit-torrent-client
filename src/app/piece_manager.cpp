@@ -11,7 +11,8 @@ PieceManager::PieceManager(core::TorrentMetadata metadata)
     : _metadata(metadata), _verificationHashes(_metadata.info.pieceHashes),
       _nextOffsets(_metadata.info.pieceHashes.size(), 0),
       _finished(_metadata.info.pieceHashes.size(), false),
-      _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0) {
+      _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
+      _fileHandler("debian.iso", metadata.info.pieceLength, metadata.info.pieceLength) {
     spdlog::debug("PieceManager initialized for {} pieces ({} bytes bitfield)",
                   _metadata.info.pieceHashes.size(), _bitfield.size());
 }
@@ -58,7 +59,7 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
     auto& pending = _pendingPieces[idx];
 
     if (offset + data.size() > pending.data.size()) {
-        spdlog::error("Received block out of bounds for piece {}", idx);
+        spdlog::debug("Received block out of bounds for piece {}", idx);
         return false;
     }
 
@@ -72,15 +73,15 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
     _pendingBlocks.erase(finishedBlock);
 
     if (pending.isFinished()) {
-        spdlog::info("Piece {} assembly complete. Verifying...", idx);
+        spdlog::debug("Piece {} assembly complete. Verifying...", idx);
 
         if (_verifyHash(idx, pending.data)) {
-            spdlog::info("Piece {} verified successfully", idx);
-            // TODO: _writeToDisk(piece_index, pending.data);
+            spdlog::debug("Piece {} verified successfully", idx);
+            _fileHandler.writePiece(idx, data);
             _finished[idx] = true;
             _pendingPieces.erase(idx);
             _setPiece(idx);
-            spdlog::info("Piece {} Verified and Written to Disk!", idx);
+            spdlog::info("Piece {} downloaded and verified.", idx);
             return true;
         } else {
             spdlog::warn("Piece {} Hash Mismatch! Discarding.", idx);
