@@ -4,7 +4,6 @@
 #include <fstream>
 #include <mutex>
 #include <span>
-#include <string_view>
 #include <vector>
 
 namespace bt {

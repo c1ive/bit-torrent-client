@@ -2,7 +2,6 @@
 #include <cassert>
 #include <mutex>
 #include <stdexcept>
-#include <string_view>
 
 namespace bt {
 FileHandler::FileHandler(std::filesystem::path path, size_t pieceSize, size_t lastPieceSize)
