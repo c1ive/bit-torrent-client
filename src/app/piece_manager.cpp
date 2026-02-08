@@ -1,23 +1,27 @@
 #include "app/piece_manager.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include "spdlog/spdlog.h"
+#include <algorithm>
 #include <cstdint>
+#include <mutex>
 #include <openssl/sha.h>
 #include <optional>
 #include <vector>
 
 namespace bt {
-PieceManager::PieceManager(core::TorrentMetadata metadata)
+PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv)
     : _metadata(metadata), _verificationHashes(_metadata.info.pieceHashes),
       _nextOffsets(_metadata.info.pieceHashes.size(), 0),
       _finished(_metadata.info.pieceHashes.size(), false),
       _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
-      _fileHandler("debian.iso", metadata.info.pieceLength, metadata.info.pieceLength) {
+      _fileHandler("debian.iso", metadata.info.pieceLength, metadata.info.pieceLength),
+      _completionCV(cv), _piecesFinished(0) {
     spdlog::debug("PieceManager initialized for {} pieces ({} bytes bitfield)",
                   _metadata.info.pieceHashes.size(), _bitfield.size());
 }
 
 std::optional<Block> PieceManager::requestBlock(std::vector<uint8_t>& peer_bitfield) {
+    std::lock_guard<std::mutex> lock(_mutex);
     for (size_t i = 0; i < _bitfield.size(); ++i) {
         uint8_t my_byte = _bitfield[i];
         uint8_t peer_byte = peer_bitfield[i];
@@ -81,7 +85,13 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
             _finished[idx] = true;
             _pendingPieces.erase(idx);
             _setPiece(idx);
+            ++_piecesFinished;
             spdlog::info("Piece {} downloaded and verified.", idx);
+
+            if (isComplete()) {
+                // Wake up torren orchestrator
+                _completionCV.notify_one();
+            }
             return true;
         } else {
             spdlog::warn("Piece {} Hash Mismatch! Discarding.", idx);
@@ -95,6 +105,7 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
 }
 
 bool PieceManager::returnBlock(const Block& block) {
+    std::lock_guard<std::mutex> lock(_mutex);
     if (_pendingBlocks.contains(block)) {
         if (block.offset < _nextOffsets[block.pieceIndex]) {
             _nextOffsets[block.pieceIndex] = block.offset;
@@ -112,6 +123,11 @@ bool PieceManager::_verifyHash(uint32_t index, std::span<uint8_t> data) const {
     SHA1(data.data(), data.size(), calculatedHash.data());
     return expectedHash == calculatedHash;
 };
+
+bool PieceManager::isComplete() {
+    spdlog::info("finished:{}, total:{}", _piecesFinished, _metadata.info.pieceHashes.size());
+    return _piecesFinished >= _metadata.info.pieceHashes.size();
+}
 
 std::optional<Block> PieceManager::_getNextBlockForPiece(uint32_t index) {
     uint32_t pieceLength = _getPieceLength(index);

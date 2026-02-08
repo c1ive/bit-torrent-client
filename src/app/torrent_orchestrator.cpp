@@ -15,14 +15,15 @@ void TorrentOrchestrator::download() {
     const auto peerId = core::generateId(20);
     spdlog::debug("Generated peer id: %s", peerId);
     const auto trackerResponse = core::announceAndGetPeers(_metadata, peerId);
+    auto peers = trackerResponse.peersBlob;
 
-    auto pieceManager = std::make_shared<PieceManager>(_metadata);
+    _pieceManager = std::make_shared<PieceManager>(_metadata, cv);
+    _peerManager = std::make_unique<PeerManager>(peers, _metadata.infoHash, peerId);
 
-    // peer blob gets consumed when creating the peer manager
-    _peerManager =
-        std::make_unique<PeerManager>(trackerResponse.peersBlob, _metadata.infoHash, peerId);
-    _peerManager->start(pieceManager);
-    spdlog::info("Peermanager successfully started.");
-    sleep(100);
-    //_peerManager->stop();
+    _peerManager->start(_pieceManager);
+
+    std::unique_lock<std::mutex> lock(_completionMutex);
+    cv.wait(lock, [&] { return _pieceManager->isComplete(); });
+
+    _peerManager->stop();
 }

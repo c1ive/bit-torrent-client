@@ -3,6 +3,7 @@
 #include "app/file_handler.hpp"
 #include "core/torrent_metadata_loader.hpp"
 
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -38,18 +39,21 @@ struct Block {
 
 class PieceManager {
 public:
-    PieceManager(core::TorrentMetadata metadata);
+    PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv);
     ~PieceManager() = default;
 
     std::optional<Block> requestBlock(std::vector<uint8_t>& peer_bitfield);
     bool deliverBlock(uint32_t idx, uint32_t offset, std::span<const uint8_t> data);
     bool returnBlock(const Block& block);
+    bool isComplete();
 
     inline int getTotalNumOfPieces() const {
         return _metadata.info.pieceHashes.size();
     };
 
 private:
+    std::condition_variable& _completionCV;
+
     FileHandler _fileHandler;
     core::TorrentMetadata _metadata;
     std::vector<uint8_t> _bitfield;
@@ -59,6 +63,7 @@ private:
     std::map<uint32_t, PendingPiece> _pendingPieces;
     std::vector<core::Sha1Hash> _verificationHashes;
     std::vector<bool> _finished;
+    int _piecesFinished;
 
     // Blocks
     std::set<Block> _pendingBlocks;

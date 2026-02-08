@@ -14,7 +14,8 @@
 namespace bt {
 PeerManager::PeerManager(std::vector<std::array<uint8_t, 6>> peerBuffer, core::Sha1Hash& infoHash,
                          std::string_view peerId)
-    : _ctx(), _peers{_deserializePeerBuffer(peerBuffer)}, _infoHash(infoHash), _peerId(peerId) {}
+    : _ctx(), _peers{_deserializePeerBuffer(peerBuffer)}, _infoHash(infoHash), _peerId(peerId),
+      _threadPool(4) {}
 
 void PeerManager::start(std::shared_ptr<PieceManager> pieceManager) {
     spdlog::debug("Starting the peer manager...");
@@ -39,13 +40,16 @@ void PeerManager::start(std::shared_ptr<PieceManager> pieceManager) {
             asio::detached);
     }
 
-    _ctx.run();
+    for (int i = 0; i < 4; ++i) {
+        _threadPool.emplace_back(std::thread{[this] { _ctx.run(); }});
+    };
 }
 
 void PeerManager::stop() {
     spdlog::info("Stopping peermanager...");
-    _ctx.stop();
-    //_thread.join();
+    for (auto& thread : _threadPool) {
+        thread.join();
+    }
 }
 
 std::vector<core::Peer>
