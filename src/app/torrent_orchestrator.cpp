@@ -10,7 +10,7 @@ using namespace bt;
 TorrentOrchestrator::TorrentOrchestrator(std::string path)
     : _metadata(core::parseTorrentData(path)) {};
 
-void TorrentOrchestrator::start() {
+void TorrentOrchestrator::download() {
     // TODO: Move to peer manager
     const auto peerId = core::generateId(20);
     spdlog::debug("Generated peer id: %s", peerId);
@@ -23,6 +23,6 @@ void TorrentOrchestrator::start() {
         std::make_unique<PeerManager>(trackerResponse.peersBlob, _metadata.infoHash, peerId);
     _peerManager->start(pieceManager);
     spdlog::info("Peermanager successfully started.");
-    sleep(20);
-    _peerManager->stop();
+    sleep(100);
+    //_peerManager->stop();
 }

@@ -2,6 +2,7 @@
 #include "core/torrent_metadata_loader.hpp"
 #include "spdlog/spdlog.h"
 #include <cstdint>
+#include <openssl/sha.h>
 #include <optional>
 #include <vector>
 
@@ -35,19 +36,80 @@ std::optional<Block> PieceManager::requestBlock(std::vector<uint8_t>& peer_bitfi
     return std::nullopt;
 }
 
-std::optional<Block> PieceManager::_getNextBlockForPiece(uint32_t index) {
-    constexpr uint32_t BLOCK_LEN = 16384;
-    uint32_t pieceLength = _metadata.info.pieceLength;
+bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const uint8_t> data) {
+    std::lock_guard<std::mutex> lock(_mutex);
 
-    // Handle the very last piece
-    if (index == _metadata.info.pieceHashes.size() - 1) {
-        uint32_t totalSize = _metadata.info.fileLength;
-        uint32_t remainder = totalSize % pieceLength;
-        if (remainder != 0)
-            pieceLength = remainder;
+    if (_finished[idx]) {
+        return true;
     }
 
-    // Start looking from where we last requested
+    if (!_pendingPieces.contains(idx)) {
+        size_t len = _getPieceLength(idx);
+        size_t totalBlocks = (len + BLOCK_LEN - 1) / BLOCK_LEN;
+
+        _pendingPieces[idx] = PendingPiece{.data = std::vector<uint8_t>(len),
+                                           .blocksReceived = 0,
+                                           .totalBlocksNeeded = totalBlocks};
+    }
+
+    auto& pending = _pendingPieces[idx];
+
+    if (offset + data.size() > pending.data.size()) {
+        spdlog::error("Received block out of bounds for piece {}", idx);
+        return false;
+    }
+
+    std::copy_n(data.data(), data.size(), pending.data.data() + offset);
+    pending.blocksReceived++;
+
+    Block finishedBlock{
+        .pieceIndex = idx,
+        .offset = offset,
+        .length = std::min(BLOCK_LEN, static_cast<uint32_t>(pending.data.size()) - offset)};
+    _pendingBlocks.erase(finishedBlock);
+
+    if (pending.isFinished()) {
+        spdlog::info("Piece {} assembly complete. Verifying...", idx);
+
+        if (_verifyHash(idx, pending.data)) {
+            spdlog::info("Piece {} verified successfully", idx);
+            //_writeToDisk(piece_index, pending.data);
+            _finished[idx] = true;
+            _pendingPieces.erase(idx);
+            spdlog::info("Piece {} Verified and Written to Disk!", idx);
+            return true;
+        } else {
+            spdlog::warn("Piece {} Hash Mismatch! Discarding.", idx);
+            _pendingPieces.erase(idx); // Throw it away
+            _nextOffsets[idx] = 0;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool PieceManager::returnBlock(const Block& block) {
+    if (_pendingBlocks.contains(block)) {
+        if (block.offset < _nextOffsets[block.pieceIndex]) {
+            _nextOffsets[block.pieceIndex] = block.offset;
+        }
+        _pendingBlocks.erase(block);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool PieceManager::_verifyHash(uint32_t index, std::span<uint8_t> data) const {
+    auto expectedHash = _verificationHashes[index];
+    core::Sha1Hash calculatedHash;
+    SHA1(data.data(), data.size(), calculatedHash.data());
+    return expectedHash == calculatedHash;
+};
+
+std::optional<Block> PieceManager::_getNextBlockForPiece(uint32_t index) {
+    uint32_t pieceLength = _getPieceLength(index);
     uint32_t currentOffset = _nextOffsets[index];
 
     // Loop until we find a gap or run out of piece
@@ -58,8 +120,8 @@ std::optional<Block> PieceManager::_getNextBlockForPiece(uint32_t index) {
             .length = std::min(BLOCK_LEN, pieceLength - currentOffset) // Clamp last block
         };
 
-        if (!_inFlight.contains(block)) {
-            _inFlight.insert(block);
+        if (!_pendingBlocks.contains(block)) {
+            _pendingBlocks.insert(block);
             _nextOffsets[index] = currentOffset + block.length;
 
             return block;
@@ -71,13 +133,27 @@ std::optional<Block> PieceManager::_getNextBlockForPiece(uint32_t index) {
     return std::nullopt;
 }
 
-bool PieceManager::_hasPiece(int index) const {
+size_t PieceManager::_getPieceLength(uint32_t index) const {
+    uint32_t pieceLength = _metadata.info.pieceLength;
+
+    // Handle the very last piece
+    if (index == _metadata.info.pieceHashes.size() - 1) {
+        uint32_t totalSize = _metadata.info.fileLength;
+        uint32_t remainder = totalSize % pieceLength;
+        if (remainder != 0)
+            pieceLength = remainder;
+    }
+
+    return pieceLength;
+}
+
+bool PieceManager::_hasPiece(uint32_t index) const {
     int byteIndex = index / 8;
     int offset = index % 8;
     return (_bitfield[byteIndex] >> (7 - offset) & 1) != 0;
 }
 
-void PieceManager::_setPiece(int index) {
+void PieceManager::_setPiece(uint32_t index) {
     int byteIndex = index / 8;
     int offset = index % 8;
     _bitfield[byteIndex] |= 1 << (7 - offset);

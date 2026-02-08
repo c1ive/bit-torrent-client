@@ -48,8 +48,8 @@ int main(int argc, char* argv[]) {
 
     try {
         spdlog::debug("Starting torrent orchestrator");
-        TorrentOrchestrator torrentOrchestrator(settings.torrent_path);
-        torrentOrchestrator.start();
+        TorrentOrchestrator to(settings.torrent_path);
+        to.download();
     } catch (const std::exception& e) {
         spdlog::critical("Fatal error: {}. Suggestion: re-run with -v for more details.", e.what());
         return 1;

@@ -14,5 +14,5 @@ private:
 
 public:
     explicit TorrentOrchestrator(std::string path);
-    void start();
+    void download();
 };

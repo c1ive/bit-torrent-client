@@ -24,6 +24,7 @@ add_library(bt_core STATIC
     src/core/bencode_parser.cpp
     src/core/peer_communicator.cpp
     src/core/tracker_communicator.cpp
+    src/core/utils.cpp
 )
 
 target_include_directories(bt_core PUBLIC 

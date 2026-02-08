@@ -39,13 +39,13 @@ void PeerManager::start(std::shared_ptr<PieceManager> pieceManager) {
             asio::detached);
     }
 
-    _thread = std::thread{[this] { _ctx.run(); }};
+    _ctx.run();
 }
 
 void PeerManager::stop() {
     spdlog::info("Stopping peermanager...");
     _ctx.stop();
-    _thread.join();
+    //_thread.join();
 }
 
 std::vector<core::Peer>

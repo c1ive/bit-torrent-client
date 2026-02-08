@@ -1,7 +1,8 @@
 #include "app/peer_session.hpp"
 #include "app/piece_manager.hpp"
 #include "core/peer_communicator.hpp"
-#include <algorithm>
+#include "core/utils.hpp"
+
 #include <asio/awaitable.hpp>
 #include <cstdint>
 #include <netinet/in.h>
@@ -22,6 +23,7 @@ asio::awaitable<uint32_t> PeerSession::_readMsgLen() {
 
     if (ec) {
         _setState(PeerState::ERROR);
+        co_await _returnBlocks();
         throw std::runtime_error{ec.message()};
     }
 
@@ -45,12 +47,21 @@ void PeerSession::_handleBitfield(std::span<uint8_t> payload) {
     spdlog::info("Successfully loaded bitfield from peer.");
 }
 
+asio::awaitable<void> PeerSession::_returnBlocks() {
+    for (const auto& block : _pendingBlocks) {
+        if (!_pieceManager->returnBlock(block)) {
+            spdlog::info("Failed to return block");
+        }
+    }
+    co_return;
+}
+
 asio::awaitable<void> PeerSession::_requestBlock() {
     std::optional<Block> block = _pieceManager->requestBlock(_peerBitfield);
     if (!block) {
         co_return;
     }
-    core::ByteWriter msg;
+    utils::ByteWriter msg;
     msg.write_u32(13);
     msg.write_u8(static_cast<uint8_t>(core::msg::id::REQUEST));
     msg.write_u32(block->pieceIndex);
@@ -59,6 +70,8 @@ asio::awaitable<void> PeerSession::_requestBlock() {
 
     auto [ec1, len] = co_await asio::async_write(_socket, asio::buffer(msg.data()),
                                                  asio::as_tuple(asio::use_awaitable));
+    // TODO: Check error
+    _pendingBlocks.push_back(block.value());
     spdlog::info("Requesting block: pieceidx:{}, offset:{}, len{}", block->pieceIndex,
                  block->offset, block->length);
 }
@@ -86,7 +99,7 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
         _handleBitfield(payload);
 
         // TODO: Only send when really interested, for now we just wantn everything
-        core::ByteWriter msg;
+        utils::ByteWriter msg;
         msg.write_u32(1);
         msg.write_u8(static_cast<uint8_t>(id::INTERESTED));
         auto [ec1, len] = co_await asio::async_write(_socket, asio::buffer(msg.data()),
@@ -95,11 +108,21 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
         _setState(PeerState::READY);
         break;
     }
-    case id::PIECE:
-        spdlog::info("INCOMING BLOCK: LEN: {}", payload.size());
+    case id::PIECE: {
         // TODO: Push block to piece manager
-        // TODO: Request new Block
-        break;
+        utils::ByteReader reader{payload};
+        uint32_t index = reader.readU32();
+        uint32_t offset = reader.readU32();
+        spdlog::info("Block incoming: len:{}, idx:{}, offset:{}", payload.size(), index, offset);
+
+        if (!_pieceManager->deliverBlock(index, offset, reader.readRemaining())) {
+            co_return;
+            // Varification failed -> drop peer
+        }
+
+        // Request a new block
+        co_await _requestBlock();
+    } break;
     default:
         spdlog::debug("Received unknown or unhandled message ID: {}", static_cast<uint8_t>(msg_id));
         break;
@@ -129,6 +152,7 @@ asio::awaitable<void> PeerSession::run() {
         if (ec2) {
             spdlog::error("Connection lost reading payload: {}", ec2.message());
             _state = PeerState::ERROR;
+            co_await _returnBlocks();
             co_return;
         }
 

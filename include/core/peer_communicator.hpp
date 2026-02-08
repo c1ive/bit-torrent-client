@@ -45,15 +45,6 @@ struct HandshakePacket {
 };
 #pragma pack(pop)
 
-class ByteWriter {
-public:
-    void write_u32(uint32_t val);
-    void write_u8(uint8_t val);
-    const std::vector<uint8_t>& data() const;
-
-private:
-    std::vector<uint8_t> _data;
-};
 
 struct Peer {
     uint16_t port;
