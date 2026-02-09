@@ -32,9 +32,9 @@ static Settings parse_args(int argc, char* argv[]) {
 
 static void init_logging(bool verbose) {
     if (verbose) {
-        spdlog::set_level(spdlog::level::debug);
-    } else {
         spdlog::set_level(spdlog::level::info);
+    } else {
+        spdlog::set_level(spdlog::level::critical);
     }
 
     spdlog::set_pattern("[%H:%M:%S %z] [%n] [%^%l%$] [thread %t] %v");
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 
     try {
         spdlog::debug("Starting torrent orchestrator");
-        TorrentOrchestrator to(settings.torrent_path);
+        TorrentOrchestrator to(settings.torrent_path, settings.verbose);
         to.download();
     } catch (const std::exception& e) {
         spdlog::critical("Fatal error: {}. Suggestion: re-run with -v for more details.", e.what());

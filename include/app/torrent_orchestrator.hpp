@@ -9,11 +9,12 @@
 
 class TorrentOrchestrator {
 public:
-    explicit TorrentOrchestrator(std::string path);
+    explicit TorrentOrchestrator(std::string path, bool logging);
     void download();
 
 private:
     bt::core::TorrentMetadata _metadata;
+    bool _logging = false;
 
     std::unique_ptr<bt::PeerManager> _peerManager;
     std::shared_ptr<bt::PieceManager> _pieceManager;

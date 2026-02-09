@@ -1,4 +1,5 @@
 #include "app/torrent_orchestrator.hpp"
+#include "app/progress_tracker.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include "core/tracker_communicator.hpp"
 #include <memory>
@@ -7,8 +8,8 @@
 
 using namespace bt;
 
-TorrentOrchestrator::TorrentOrchestrator(std::string path)
-    : _metadata(core::parseTorrentData(path)) {};
+TorrentOrchestrator::TorrentOrchestrator(std::string path, bool logging)
+    : _logging(logging), _metadata(core::parseTorrentData(path)) {};
 
 void TorrentOrchestrator::download() {
     // TODO: Move to peer manager
@@ -17,7 +18,13 @@ void TorrentOrchestrator::download() {
     const auto trackerResponse = core::announceAndGetPeers(_metadata, peerId);
     auto peers = trackerResponse.peersBlob;
 
-    _pieceManager = std::make_shared<PieceManager>(_metadata, cv);
+    std::unique_ptr<bt::ProgressTracker> p = nullptr;
+
+    if (!_logging) {
+        p = std::make_unique<bt::ProgressTracker>(_metadata.info.pieceHashes.size(), 100);
+    }
+
+    _pieceManager = std::make_shared<PieceManager>(_metadata, cv, std::move(p));
     _peerManager = std::make_unique<PeerManager>(peers, _metadata.infoHash, peerId);
 
     _peerManager->start(_pieceManager);

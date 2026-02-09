@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/file_handler.hpp"
+#include "app/progress_tracker.hpp"
 #include "core/torrent_metadata_loader.hpp"
 
 #include <condition_variable>
@@ -39,7 +40,8 @@ struct Block {
 
 class PieceManager {
 public:
-    PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv);
+    PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv,
+                 std::unique_ptr<ProgressTracker> progressTracker);
     ~PieceManager() = default;
 
     std::optional<Block> requestBlock(std::vector<uint8_t>& peer_bitfield);
@@ -53,6 +55,7 @@ public:
 
 private:
     std::condition_variable& _completionCV;
+    std::unique_ptr<bt::ProgressTracker> _progressTracker;
 
     FileHandler _fileHandler;
     core::TorrentMetadata _metadata;

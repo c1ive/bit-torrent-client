@@ -1,4 +1,5 @@
 #include "app/piece_manager.hpp"
+#include "app/progress_tracker.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include "spdlog/spdlog.h"
 #include <algorithm>
@@ -9,13 +10,14 @@
 #include <vector>
 
 namespace bt {
-PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv)
+PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv,
+                           std::unique_ptr<bt::ProgressTracker> progressTracker)
     : _metadata(metadata), _verificationHashes(_metadata.info.pieceHashes),
       _nextOffsets(_metadata.info.pieceHashes.size(), 0),
       _finished(_metadata.info.pieceHashes.size(), false),
       _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
       _fileHandler("debian.iso", metadata.info.pieceLength, metadata.info.pieceLength),
-      _completionCV(cv), _piecesFinished(0) {
+      _completionCV(cv), _piecesFinished(0), _progressTracker(std::move(progressTracker)) {
     spdlog::debug("PieceManager initialized for {} pieces ({} bytes bitfield)",
                   _metadata.info.pieceHashes.size(), _bitfield.size());
 }
@@ -83,6 +85,11 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
             _pendingPieces.erase(idx);
             _setPiece(idx);
             ++_piecesFinished;
+
+            if (_progressTracker) {
+                _progressTracker->notifyProgress();
+            }
+
             spdlog::info("Piece {} downloaded and verified.", idx);
 
             if (isComplete()) {
