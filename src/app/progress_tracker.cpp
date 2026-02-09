@@ -1,6 +1,7 @@
 #include "app/progress_tracker.hpp"
 #include <cstdio>
-#include <iostream> // for std::flush
+#include <ctime>
+#include <iostream>
 #include <string>
 
 namespace bt {
@@ -8,8 +9,19 @@ namespace bt {
 ProgressTracker::ProgressTracker(int totalPieces, int frequency)
     : _totalPieces(totalPieces), _frequency(frequency) {
 
-    std::printf("Bittorrent Client - V0.0.1\n");
-    std::printf("Download Progress:\n");
+    std::time_t now_time = std::time(nullptr);
+    char time_str[20];
+    std::strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", std::localtime(&now_time));
+
+    std::printf("\033[?25l");
+    std::printf("\033[1;34m==========================================================\033[0m\n");
+    std::printf("\033[1;36m BIT-TORRENT CLIENT \033[0m| \033[1;32mVersion 0.0.1-alpha\033[0m\n");
+    std::printf("\033[1;37m Created by: \033[1;33mJonas Sasowski\033[0m\n");
+    std::printf("\033[1;37m Session Start: \033[0m%s\n", time_str);
+    std::printf("\033[1;37m Total Workload: \033[1;32m%d Pieces\033[0m\n", _totalPieces);
+    std::printf("\033[1;34m==========================================================\033[0m\n\n");
+    std::printf("\033[1mCurrent Task Status:\033[0m\n");
+
     _startTime = std::chrono::high_resolution_clock::now();
     _thread = std::thread([this]() {
         while (_keepRunning) {
@@ -27,6 +39,8 @@ ProgressTracker::~ProgressTracker() {
 
     _logProgress();
     std::cout << std::endl;
+    std::printf("\033[1;32m\n[SUCCESS] Download session finalized.\033[0m\n");
+    std::printf("\033[?25h");
 }
 
 void ProgressTracker::notifyProgress() {
@@ -52,8 +66,9 @@ void ProgressTracker::_logProgress() {
     auto now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsedSeconds = now - _startTime;
 
-    std::printf("\r[%.2fs] [%.2f%%] [%s%s]", elapsedSeconds.count(), percent, hashtags.c_str(),
-                spaces.c_str());
+    std::printf("\r\033[1;33m[%.2fs]\033[0m \033[1;36m[%.2f%%]\033[0m "
+                "[\033[1;32m%s\033[0m\033[2m%s\033[0m]\033[K",
+                elapsedSeconds.count(), percent, hashtags.c_str(), spaces.c_str());
     std::fflush(stdout);
 }
 
