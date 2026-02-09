@@ -11,7 +11,7 @@
 #include <stdexcept>
 
 namespace bt {
-constexpr int MAX_PIPELINE_SIZE = 16;
+constexpr int MAX_PIPELINE_SIZE = 32;
 
 PeerSession::PeerSession(asio::io_context& io_context, std::shared_ptr<PieceManager> pieceManager)
     : _socket(io_context), _pieceManager(pieceManager), _state(PeerState::CONNECTING) {}
