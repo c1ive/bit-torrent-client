@@ -8,8 +8,10 @@
 
 using namespace bt;
 
-TorrentOrchestrator::TorrentOrchestrator(std::string path, bool logging)
-    : _logging(logging), _metadata(core::parseTorrentData(path)) {};
+TorrentOrchestrator::TorrentOrchestrator(std::string path, std::filesystem::path outputPath,
+                                         bool logging)
+    : _logging(logging), _metadata(core::parseTorrentData(path)),
+      _outputPath(std::move(outputPath)) {};
 
 void TorrentOrchestrator::download() {
     // TODO: Move to peer manager
@@ -24,7 +26,12 @@ void TorrentOrchestrator::download() {
         p = std::make_unique<bt::ProgressTracker>(_metadata.info.pieceHashes.size(), 100);
     }
 
-    _pieceManager = std::make_shared<PieceManager>(_metadata, cv, std::move(p));
+    std::filesystem::path outputPath = _outputPath;
+    if (outputPath.empty()) {
+        outputPath = _metadata.info.fileName;
+    }
+
+    _pieceManager = std::make_shared<PieceManager>(_metadata, cv, std::move(p), outputPath);
     _peerManager = std::make_unique<PeerManager>(peers, _metadata.infoHash, peerId);
 
     _peerManager->start(_pieceManager);

@@ -8,6 +8,7 @@
 
 struct Settings {
     std::string torrent_path;
+    std::string output_path;
     bool verbose;
 };
 
@@ -15,6 +16,7 @@ static Settings parse_args(int argc, char* argv[]) {
     argparse::ArgumentParser app("bit-torrent-client");
 
     app.add_argument("-t", "--torrent").required().help("Path to the torrent file");
+    app.add_argument("-o", "--output").help("Output file path").default_value(std::string());
     app.add_argument("-v", "--verbose")
         .help("Verbose logs")
         .default_value(false)
@@ -27,7 +29,8 @@ static Settings parse_args(int argc, char* argv[]) {
         std::exit(1);
     }
 
-    return {app.get<std::string>("--torrent"), app.get<bool>("--verbose")};
+    return {app.get<std::string>("--torrent"), app.get<std::string>("--output"),
+            app.get<bool>("--verbose")};
 }
 
 static void init_logging(bool verbose) {
@@ -48,7 +51,7 @@ int main(int argc, char* argv[]) {
 
     try {
         spdlog::debug("Starting torrent orchestrator");
-        TorrentOrchestrator to(settings.torrent_path, settings.verbose);
+        TorrentOrchestrator to(settings.torrent_path, settings.output_path, settings.verbose);
         to.download();
     } catch (const std::exception& e) {
         spdlog::critical("Fatal error: {}. Suggestion: re-run with -v for more details.", e.what());

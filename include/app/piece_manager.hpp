@@ -8,6 +8,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+
+#include <filesystem>
+#include <map>
 #include <mutex>
 #include <openssl/sha.h>
 #include <optional>
@@ -41,7 +44,8 @@ struct Block {
 class PieceManager {
 public:
     PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv,
-                 std::unique_ptr<ProgressTracker> progressTracker);
+                 std::unique_ptr<ProgressTracker> progressTracker,
+                 std::filesystem::path outputPath);
     ~PieceManager() = default;
 
     std::optional<Block> requestBlock(const std::vector<uint8_t>& peer_bitfield,
