@@ -44,7 +44,8 @@ public:
                  std::unique_ptr<ProgressTracker> progressTracker);
     ~PieceManager() = default;
 
-    std::optional<Block> requestBlock(std::vector<uint8_t>& peer_bitfield);
+    std::optional<Block> requestBlock(const std::vector<uint8_t>& peer_bitfield,
+                                      const std::set<Block>& peer_pending);
     bool deliverBlock(uint32_t idx, uint32_t offset, std::span<const uint8_t> data);
     bool returnBlock(const Block& block);
     bool isComplete();

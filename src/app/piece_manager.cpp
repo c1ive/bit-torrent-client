@@ -22,7 +22,8 @@ PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variab
                   _metadata.info.pieceHashes.size(), _bitfield.size());
 }
 
-std::optional<Block> PieceManager::requestBlock(std::vector<uint8_t>& peer_bitfield) {
+std::optional<Block> PieceManager::requestBlock(const std::vector<uint8_t>& peer_bitfield,
+                                                const std::set<Block>& peer_pending) {
     std::lock_guard<std::mutex> lock(_mutex);
     for (size_t i = 0; i < _bitfield.size(); ++i) {
         uint8_t my_byte = _bitfield[i];
@@ -42,6 +43,23 @@ std::optional<Block> PieceManager::requestBlock(std::vector<uint8_t>& peer_bitfi
         }
     }
 
+    // Endgame mode
+    for (const auto& block : _pendingBlocks) {
+        if (peer_pending.contains(block)) {
+            continue;
+        }
+
+        int byteIndex = block.pieceIndex / 8;
+        int bitIndex = block.pieceIndex % 8;
+
+        if (byteIndex < static_cast<int>(peer_bitfield.size())) {
+            bool peerHasPiece = ((peer_bitfield[byteIndex] >> (7 - bitIndex)) & 1) != 0;
+            if (peerHasPiece) {
+                return block;
+            }
+        }
+    }
+
     // Peer has nothing we want
     return std::nullopt;
 }
@@ -49,14 +67,12 @@ std::optional<Block> PieceManager::requestBlock(std::vector<uint8_t>& peer_bitfi
 bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const uint8_t> data) {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    if (_finished[idx]) {
+    if (_finished[idx])
         return true;
-    }
 
     if (!_pendingPieces.contains(idx)) {
         size_t len = _getPieceLength(idx);
         size_t totalBlocks = (len + BLOCK_LEN - 1) / BLOCK_LEN;
-
         _pendingPieces[idx] = PendingPiece{.data = std::vector<uint8_t>(len),
                                            .blocksReceived = 0,
                                            .totalBlocksNeeded = totalBlocks};
@@ -69,42 +85,42 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
         return false;
     }
 
-    std::copy_n(data.data(), data.size(), pending.data.data() + offset);
-    pending.blocksReceived++;
-
     Block finishedBlock{
         .pieceIndex = idx,
         .offset = offset,
         .length = std::min(BLOCK_LEN, static_cast<uint32_t>(pending.data.size()) - offset)};
-    _pendingBlocks.erase(finishedBlock);
+
+    if (_pendingBlocks.erase(finishedBlock) == 0) {
+        return true;
+    }
+
+    std::copy_n(data.data(), data.size(), pending.data.data() + offset);
+    pending.blocksReceived++;
 
     if (pending.isFinished()) {
         if (_verifyHash(idx, pending.data)) {
-            _fileHandler.writePiece(idx, data);
+            _fileHandler.writePiece(idx, pending.data);
             _finished[idx] = true;
             _pendingPieces.erase(idx);
             _setPiece(idx);
             ++_piecesFinished;
 
-            if (_progressTracker) {
+            if (_progressTracker)
                 _progressTracker->notifyProgress();
-            }
 
             spdlog::info("Piece {} downloaded and verified.", idx);
 
             if (isComplete()) {
-                // Wake up torren orchestrator
                 _completionCV.notify_one();
             }
             return true;
         } else {
             spdlog::warn("Piece {} Hash Mismatch! Discarding.", idx);
-            _pendingPieces.erase(idx); // Throw it away
+            _pendingPieces.erase(idx);
             _nextOffsets[idx] = 0;
             return false;
         }
     }
-
     return true;
 }
 

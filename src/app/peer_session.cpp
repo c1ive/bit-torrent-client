@@ -58,7 +58,7 @@ asio::awaitable<void> PeerSession::_returnBlocks() {
 }
 
 asio::awaitable<void> PeerSession::_requestBlock() {
-    std::optional<Block> block = _pieceManager->requestBlock(_peerBitfield);
+    std::optional<Block> block = _pieceManager->requestBlock(_peerBitfield, _pendingBlocks);
     if (!block) {
         co_return;
     }
