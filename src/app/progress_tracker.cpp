@@ -47,6 +47,19 @@ void ProgressTracker::notifyProgress() {
     ++_finishedPieces;
 }
 
+void ProgressTracker::setResumeMessage(int resumedPieces) {
+    if (resumedPieces <= 0) {
+        return;
+    }
+
+    std::printf("\033[1;33m[RESUME]\033[0m Resuming download with %d pieces already completed.\n",
+                resumedPieces);
+}
+
+void ProgressTracker::setFinishedPieces(int finishedPieces) {
+    _finishedPieces.store(finishedPieces, std::memory_order_relaxed);
+}
+
 void ProgressTracker::_logProgress() {
     double progress = static_cast<double>(_finishedPieces) / _totalPieces;
     double percent = progress * 100.0;

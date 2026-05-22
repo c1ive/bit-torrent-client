@@ -9,6 +9,8 @@ public:
     ProgressTracker(int totalPieces, int frequency);
     ~ProgressTracker();
     void notifyProgress();
+    void setFinishedPieces(int finishedPieces);
+    void setResumeMessage(int resumedPieces);
 
 private:
     void _logProgress();

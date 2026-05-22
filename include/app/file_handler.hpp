@@ -14,10 +14,13 @@ public:
 
     void writePiece(uint32_t index, std::span<const uint8_t> data);
     std::vector<uint8_t> loadResumeStatus();
+    void saveResumeStatus(const std::vector<uint8_t>& status);
+    void deleteResumeStatusFile();
 
 private:
     std::mutex _mtx;
     std::fstream _fileStream;
+    std::filesystem::path _resumePath;
 
     size_t _pieceSize;
     size_t _lastPieceSize;

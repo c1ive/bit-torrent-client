@@ -20,6 +20,26 @@ PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variab
       _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
       _fileHandler(std::move(outputPath), metadata.info.pieceLength, metadata.info.pieceLength),
       _completionCV(cv), _piecesFinished(0), _progressTracker(std::move(progressTracker)) {
+    const auto resumeStatus = _fileHandler.loadResumeStatus();
+    if (!resumeStatus.empty()) {
+        std::vector<uint8_t> normalized(resumeStatus);
+        normalized.resize(_bitfield.size());
+        _bitfield = normalized;
+
+        for (uint32_t pieceIndex = 0; pieceIndex < _metadata.info.pieceHashes.size();
+             ++pieceIndex) {
+            if (_hasPiece(pieceIndex)) {
+                _finished[pieceIndex] = true;
+                ++_piecesFinished;
+            }
+        }
+        if (_progressTracker) {
+            _progressTracker->setFinishedPieces(_piecesFinished);
+            _progressTracker->setResumeMessage(_piecesFinished);
+        }
+        spdlog::info("Resuming download; {} pieces already complete.", _piecesFinished);
+    }
+
     spdlog::debug("PieceManager initialized for {} pieces ({} bytes bitfield)",
                   _metadata.info.pieceHashes.size(), _bitfield.size());
 }
@@ -111,11 +131,12 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
 
     if (pending.isFinished()) {
         if (_verifyHash(idx, pending.data)) {
-            _fileHandler.writePiece(idx, data);
+            _fileHandler.writePiece(idx, pending.data);
             _finished[idx] = true;
             _pendingPieces.erase(idx);
             _setPiece(idx);
             ++_piecesFinished;
+            _fileHandler.saveResumeStatus(_bitfield);
 
             if (_progressTracker) {
                 _progressTracker->notifyProgress();
@@ -124,6 +145,7 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
             spdlog::info("Piece {} downloaded and verified.", idx);
 
             if (isComplete()) {
+                _fileHandler.deleteResumeStatusFile();
                 // Wake up torren orchestrator
                 _completionCV.notify_one();
             }
