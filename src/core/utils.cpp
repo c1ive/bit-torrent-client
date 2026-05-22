@@ -1,5 +1,9 @@
 #include "core/utils.hpp"
 
+#include <fstream>
+#include <iomanip>
+#include <openssl/sha.h>
+#include <sstream>
 #include <stdexcept>
 
 namespace bt::utils {
@@ -41,5 +45,36 @@ uint8_t ByteReader::readU8() {
 // Get the remaining bytes (for the actual file data)
 std::span<const uint8_t> ByteReader::readRemaining() {
     return _buffer.subspan(_cursor);
+}
+
+std::string ByteReader::sha256sum(const std::filesystem::path& path) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file for SHA256: " + path.string());
+    }
+
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+
+    std::vector<char> buffer(16 * 1024);
+    while (file.good()) {
+        file.read(buffer.data(), buffer.size());
+        std::streamsize bytesRead = file.gcount();
+        if (bytesRead > 0) {
+            SHA256_Update(&sha256, reinterpret_cast<const unsigned char*>(buffer.data()),
+                          static_cast<size_t>(bytesRead));
+        }
+    }
+
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256_Final(digest, &sha256);
+
+    std::ostringstream hex;
+    hex << std::hex << std::setfill('0');
+    for (unsigned char byte : digest) {
+        hex << std::setw(2) << static_cast<int>(byte);
+    }
+
+    return hex.str();
 }
 } // namespace bt::utils

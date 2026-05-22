@@ -54,9 +54,11 @@ void ProgressTracker::_logProgress() {
     if (percent > 100.0)
         percent = 100.0;
 
-    int amountHash = static_cast<int>(percent);
-    int amountSpace = 100 - amountHash;
-
+    const int BAR_WIDTH = 50;
+    int amountHash = static_cast<int>(progress * BAR_WIDTH);
+    if (amountHash > BAR_WIDTH)
+        amountHash = BAR_WIDTH;
+    int amountSpace = BAR_WIDTH - amountHash;
     if (amountSpace < 0)
         amountSpace = 0;
 
@@ -66,8 +68,8 @@ void ProgressTracker::_logProgress() {
     auto now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsedSeconds = now - _startTime;
 
-    std::printf("\r\033[1;33m[%.2fs]\033[0m \033[1;36m[%.2f%%]\033[0m "
-                "[\033[1;32m%s\033[0m\033[2m%s\033[0m]\033[K",
+    std::printf("\r\033[K\033[1;33m[%.2fs]\033[0m \033[1;36m[%6.2f%%]\033[0m "
+                "[\033[1;32m%s\033[0m\033[2m%s\033[0m]",
                 elapsedSeconds.count(), percent, hashtags.c_str(), spaces.c_str());
     std::fflush(stdout);
 }

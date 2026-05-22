@@ -9,6 +9,7 @@
 struct Settings {
     std::string torrent_path;
     std::string output_path;
+    std::string expected_sha256;
     bool verbose;
 };
 
@@ -17,6 +18,9 @@ static Settings parse_args(int argc, char* argv[]) {
 
     app.add_argument("-t", "--torrent").required().help("Path to the torrent file");
     app.add_argument("-o", "--output").help("Output file path").default_value(std::string());
+    app.add_argument("--sha256")
+        .help("Expected SHA256 checksum for the downloaded file")
+        .default_value(std::string());
     app.add_argument("-v", "--verbose")
         .help("Verbose logs")
         .default_value(false)
@@ -30,7 +34,7 @@ static Settings parse_args(int argc, char* argv[]) {
     }
 
     return {app.get<std::string>("--torrent"), app.get<std::string>("--output"),
-            app.get<bool>("--verbose")};
+            app.get<std::string>("--sha256"), app.get<bool>("--verbose")};
 }
 
 static void init_logging(bool verbose) {
@@ -51,7 +55,8 @@ int main(int argc, char* argv[]) {
 
     try {
         spdlog::debug("Starting torrent orchestrator");
-        TorrentOrchestrator to(settings.torrent_path, settings.output_path, settings.verbose);
+        TorrentOrchestrator to(settings.torrent_path, settings.output_path, settings.verbose,
+                               settings.expected_sha256);
         to.download();
     } catch (const std::exception& e) {
         spdlog::critical("Fatal error: {}. Suggestion: re-run with -v for more details.", e.what());

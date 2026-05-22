@@ -1,7 +1,9 @@
 #pragma once
 #include <cstring>
+#include <filesystem>
 #include <netinet/in.h>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace bt::utils {
@@ -22,6 +24,8 @@ public:
     uint32_t readU32();
     uint8_t readU8();
     std::span<const uint8_t> readRemaining();
+
+    static std::string sha256sum(const std::filesystem::path& path);
 
 private:
     std::span<const uint8_t> _buffer;
