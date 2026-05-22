@@ -31,7 +31,8 @@ void TorrentOrchestrator::download() {
         outputPath = _metadata.info.fileName;
     }
 
-    _pieceManager = std::make_shared<PieceManager>(_metadata, cv, std::move(p), outputPath);
+    _pieceManager =
+        std::make_shared<PieceManager>(_metadata, cv, std::move(p), outputPath, _completionMutex);
     _peerManager = std::make_unique<PeerManager>(peers, _metadata.infoHash, peerId);
 
     _peerManager->start(_pieceManager);

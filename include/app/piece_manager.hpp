@@ -44,15 +44,15 @@ struct Block {
 class PieceManager {
 public:
     PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv,
-                 std::unique_ptr<ProgressTracker> progressTracker,
-                 std::filesystem::path outputPath);
+                 std::unique_ptr<ProgressTracker> progressTracker, std::filesystem::path outputPath,
+                 std::mutex& completionMutex);
     ~PieceManager() = default;
 
     std::optional<Block> requestBlock(const std::vector<uint8_t>& peer_bitfield,
                                       const std::set<Block>& peer_pending);
     bool deliverBlock(uint32_t idx, uint32_t offset, std::span<const uint8_t> data);
     bool returnBlock(const Block& block);
-    bool isComplete();
+    bool isComplete() const;
 
     inline int getTotalNumOfPieces() const {
         return _metadata.info.pieceHashes.size();
@@ -60,6 +60,7 @@ public:
 
 private:
     std::condition_variable& _completionCV;
+    std::mutex& _completionMutex;
     std::unique_ptr<bt::ProgressTracker> _progressTracker;
 
     FileHandler _fileHandler;

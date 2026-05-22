@@ -12,13 +12,14 @@
 namespace bt {
 PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv,
                            std::unique_ptr<bt::ProgressTracker> progressTracker,
-                           std::filesystem::path outputPath)
+                           std::filesystem::path outputPath, std::mutex& completionMutex)
     : _metadata(metadata), _verificationHashes(_metadata.info.pieceHashes),
       _nextOffsets(_metadata.info.pieceHashes.size(), 0),
       _finished(_metadata.info.pieceHashes.size(), false),
       _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
       _fileHandler(std::move(outputPath), metadata.info.pieceLength, metadata.info.pieceLength),
-      _completionCV(cv), _piecesFinished(0), _progressTracker(std::move(progressTracker)) {
+      _completionCV(cv), _completionMutex(completionMutex), _piecesFinished(0),
+      _progressTracker(std::move(progressTracker)) {
     spdlog::debug("PieceManager initialized for {} pieces ({} bytes bitfield)",
                   _metadata.info.pieceHashes.size(), _bitfield.size());
 }
@@ -66,7 +67,7 @@ std::optional<Block> PieceManager::requestBlock(const std::vector<uint8_t>& peer
 }
 
 bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const uint8_t> data) {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock(_mutex);
 
     if (_finished[idx])
         return true;
@@ -106,12 +107,19 @@ bool PieceManager::deliverBlock(uint32_t idx, uint32_t offset, std::span<const u
             _setPiece(idx);
             ++_piecesFinished;
 
+            bool shouldNotify =
+                (_piecesFinished >= static_cast<int>(_metadata.info.pieceHashes.size()));
+
             if (_progressTracker)
                 _progressTracker->notifyProgress();
 
             spdlog::info("Piece {} downloaded and verified.", idx);
 
-            if (isComplete()) {
+            // Release mutex before notifying to prevent deadlock
+            lock.unlock();
+
+            if (shouldNotify) {
+                std::lock_guard<std::mutex> notifyLock(_completionMutex);
                 _completionCV.notify_one();
             }
             return true;
@@ -145,8 +153,8 @@ bool PieceManager::_verifyHash(uint32_t index, std::span<uint8_t> data) const {
     return expectedHash == calculatedHash;
 };
 
-bool PieceManager::isComplete() {
-    return _piecesFinished >= _metadata.info.pieceHashes.size();
+bool PieceManager::isComplete() const {
+    return _piecesFinished >= static_cast<int>(_metadata.info.pieceHashes.size());
 }
 
 std::optional<Block> PieceManager::_getNextBlockForPiece(uint32_t index) {
