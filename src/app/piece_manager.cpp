@@ -11,13 +11,14 @@
 
 namespace bt {
 PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv,
-                           std::unique_ptr<bt::ProgressTracker> progressTracker)
+                           std::unique_ptr<bt::ProgressTracker> progressTracker,
+                           std::filesystem::path outputPath)
     : _metadata(metadata), _verificationHashes(_metadata.info.pieceHashes),
       _nextOffsets(_metadata.info.pieceHashes.size(), 0),
       _finished(_metadata.info.pieceHashes.size(), false),
       _pieceAvailability(_metadata.info.pieceHashes.size(), 0),
       _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
-      _fileHandler("debian.iso", metadata.info.pieceLength, metadata.info.pieceLength),
+      _fileHandler(std::move(outputPath), metadata.info.pieceLength, metadata.info.pieceLength),
       _completionCV(cv), _piecesFinished(0), _progressTracker(std::move(progressTracker)) {
     spdlog::debug("PieceManager initialized for {} pieces ({} bytes bitfield)",
                   _metadata.info.pieceHashes.size(), _bitfield.size());

@@ -4,16 +4,18 @@
 #include "app/piece_manager.hpp"
 #include "core/torrent_metadata_loader.hpp"
 #include <condition_variable>
+#include <filesystem>
 #include <memory>
 #include <string>
 
 class TorrentOrchestrator {
 public:
-    explicit TorrentOrchestrator(std::string path, bool logging);
+    explicit TorrentOrchestrator(std::string path, std::filesystem::path outputPath, bool logging);
     void download();
 
 private:
     bt::core::TorrentMetadata _metadata;
+    std::filesystem::path _outputPath;
     bool _logging = false;
 
     std::unique_ptr<bt::PeerManager> _peerManager;
