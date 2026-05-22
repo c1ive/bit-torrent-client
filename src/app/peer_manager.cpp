@@ -25,7 +25,7 @@ void PeerManager::start(std::shared_ptr<PieceManager> pieceManager) {
 
     for (const auto& peer : _peers) {
         auto session = std::make_shared<PeerSession>(_ctx, pieceManager);
-
+        _sessions.push_back(session);
         asio::co_spawn(
             _ctx,
             [session, peer, this]() -> asio::awaitable<void> {
@@ -47,9 +47,19 @@ void PeerManager::start(std::shared_ptr<PieceManager> pieceManager) {
 
 void PeerManager::stop() {
     spdlog::info("Stopping peermanager...");
-    for (auto& thread : _threadPool) {
-        thread.join();
+
+    for (auto& session : _sessions) {
+        session->disconnect();
     }
+
+    for (auto& thread : _threadPool) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
+
+    // 4. Drop the sessions now, well BEFORE the io_context is destroyed.
+    _sessions.clear();
 }
 
 std::vector<core::Peer>

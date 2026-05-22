@@ -1,4 +1,5 @@
 #pragma once
+#include "app/peer_session.hpp"
 #include "app/piece_manager.hpp"
 #include "core/peer_communicator.hpp"
 #include "core/torrent_metadata_loader.hpp"
@@ -24,6 +25,8 @@ private:
     core::Sha1Hash& _infoHash;
     std::string_view _peerId;
     std::vector<std::thread> _threadPool;
+
+    std::vector<std::shared_ptr<PeerSession>> _sessions;
 
     static std::vector<core::Peer>
     _deserializePeerBuffer(const std::vector<std::array<uint8_t, 6>>& peerBuffer);

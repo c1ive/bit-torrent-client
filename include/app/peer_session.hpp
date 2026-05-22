@@ -29,10 +29,17 @@ public:
     asio::awaitable<void> doHandshake(const core::Sha1Hash& infoHash, std::string_view peerId);
     asio::awaitable<void> run();
 
-    // Helper to check connection status
-    // bool isOpen() const {
-    //     return _socket.is_open();
-    // }
+    void disconnect() {
+        if (_socket.is_open()) {
+            std::error_code ec;
+            _socket.close(ec);
+            if (ec) {
+                spdlog::error("Error closing socket: {}", ec.message());
+            } else {
+                spdlog::debug("Socket closed successfully");
+            }
+        }
+    }
 
 private:
     bool _am_choking = true;       // We are choking the peer (default)
