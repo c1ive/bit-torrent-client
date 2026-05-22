@@ -12,9 +12,12 @@
 
 namespace bt {
 constexpr int MAX_PIPELINE_SIZE = 32;
+constexpr int MAX_MESSAGES_WITHOUT_PROGRESS = 128;
+constexpr int MAX_KEEP_ALIVE_WITHOUT_PROGRESS = 64;
 
 PeerSession::PeerSession(asio::io_context& io_context, std::shared_ptr<PieceManager> pieceManager)
-    : _socket(io_context), _pieceManager(pieceManager), _state(PeerState::CONNECTING) {}
+    : _socket(io_context), _pieceManager(pieceManager), _peerKey(reinterpret_cast<size_t>(this)),
+      _state(PeerState::CONNECTING) {}
 
 asio::awaitable<uint32_t> PeerSession::_readMsgLen() {
     uint32_t network_len = 0;
@@ -44,6 +47,7 @@ void PeerSession::_handleBitfield(std::span<uint8_t> payload) {
     }
 
     _peerBitfield.assign(payload.begin(), payload.end());
+    _pieceManager->registerPeerBitfield(_peerKey, _peerBitfield);
 
     spdlog::info("Successfully loaded bitfield from peer.");
 }
@@ -54,6 +58,7 @@ asio::awaitable<void> PeerSession::_returnBlocks() {
             spdlog::debug("Failed to return block");
         }
     }
+    _pieceManager->unregisterPeerBitfield(_peerKey);
     co_return;
 }
 
@@ -87,18 +92,44 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
     case id::CHOKE:
         spdlog::debug("Peer choked us");
         _peer_choking = true;
+        ++_messagesWithoutProgress;
         break;
     case id::UNCHOKE: {
         spdlog::debug("Peer unchoked us! We can request now.");
         _peer_choking = false;
+        _messagesWithoutProgress = 0;
+        _keepAliveCount = 0;
         int needed = MAX_PIPELINE_SIZE - _pendingBlocks.size();
         for (int i = 0; i < needed; ++i) {
             co_await _requestBlock();
         }
     }; break;
-    case id::HAVE:
-        // Parse payload (4 bytes index) and update bitfield
+    case id::HAVE: {
+        if (payload.size() != 4) {
+            spdlog::debug("Malformed HAVE payload size {}", payload.size());
+            break;
+        }
+        utils::ByteReader reader{payload};
+        uint32_t pieceIndex = reader.readU32();
+        int pieces = _pieceManager->getTotalNumOfPieces();
+        if (pieceIndex >= static_cast<uint32_t>(pieces)) {
+            spdlog::debug("Received HAVE for invalid piece index {}", pieceIndex);
+            break;
+        }
+
+        size_t expected_size = (pieces + 7) / 8;
+        if (_peerBitfield.size() < expected_size) {
+            _peerBitfield.assign(expected_size, 0);
+        }
+
+        size_t byteIndex = pieceIndex / 8;
+        uint8_t bitMask = 1 << (7 - (pieceIndex % 8));
+        if (!(_peerBitfield[byteIndex] & bitMask)) {
+            _peerBitfield[byteIndex] |= bitMask;
+            _pieceManager->updatePeerBitfield(_peerKey, _peerBitfield);
+        }
         break;
+    }
     case id::BITFIELD: {
         spdlog::debug("Received Bitfield of size {}", payload.size());
         _handleBitfield(payload);
@@ -125,8 +156,10 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
         _pendingBlocks.erase(Block{.pieceIndex = index,
                                    .offset = offset,
                                    .length = static_cast<uint32_t>(payload.size() - 8)});
+        _messagesWithoutProgress = 0;
+        _keepAliveCount = 0;
 
-        // Pipline request a new block
+        // Pipeline request a new block
         int needed = MAX_PIPELINE_SIZE - _pendingBlocks.size();
         for (int i = 0; i < needed; ++i) {
             co_await _requestBlock();
@@ -134,6 +167,7 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
     } break;
     default:
         spdlog::debug("Received unknown or unhandled message ID: {}", static_cast<uint8_t>(msg_id));
+        ++_messagesWithoutProgress;
         break;
     }
 }
@@ -152,6 +186,14 @@ asio::awaitable<void> PeerSession::run() {
 
         if (len == 0) {
             spdlog::debug("Received Keep-Alive");
+            ++_keepAliveCount;
+            ++_messagesWithoutProgress;
+            if (_keepAliveCount >= MAX_KEEP_ALIVE_WITHOUT_PROGRESS) {
+                spdlog::warn("Peer sent too many keep-alives without progress, disconnecting");
+                _state = PeerState::ERROR;
+                co_await _returnBlocks();
+                co_return;
+            }
             continue; // Go back to start of loop
         }
         std::vector<uint8_t> message_buffer(len);
@@ -172,6 +214,14 @@ asio::awaitable<void> PeerSession::run() {
         }
 
         co_await _handleMessage(msg_id, payload);
+
+        if (_messagesWithoutProgress >= MAX_MESSAGES_WITHOUT_PROGRESS) {
+            spdlog::warn("Disconnecting peer due to extended no progress ({})",
+                         _messagesWithoutProgress);
+            _state = PeerState::ERROR;
+            co_await _returnBlocks();
+            co_return;
+        }
     }
 };
 

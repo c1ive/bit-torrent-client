@@ -15,6 +15,7 @@ PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variab
     : _metadata(metadata), _verificationHashes(_metadata.info.pieceHashes),
       _nextOffsets(_metadata.info.pieceHashes.size(), 0),
       _finished(_metadata.info.pieceHashes.size(), false),
+      _pieceAvailability(_metadata.info.pieceHashes.size(), 0),
       _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
       _fileHandler("debian.iso", metadata.info.pieceLength, metadata.info.pieceLength),
       _completionCV(cv), _piecesFinished(0), _progressTracker(std::move(progressTracker)) {
@@ -24,25 +25,54 @@ PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variab
 
 std::optional<Block> PieceManager::requestBlock(std::vector<uint8_t>& peer_bitfield) {
     std::lock_guard<std::mutex> lock(_mutex);
-    for (size_t i = 0; i < _bitfield.size(); ++i) {
-        uint8_t my_byte = _bitfield[i];
-        uint8_t peer_byte = peer_bitfield[i];
-        uint8_t needed = peer_byte & ~my_byte;
+    size_t totalPieces = _metadata.info.pieceHashes.size();
+    std::vector<uint32_t> candidates;
+    candidates.reserve(totalPieces);
 
-        if (needed > 0) {
-            for (int bit = 7; bit >= 0; --bit) {
-                if ((needed >> bit) & 1) {
-                    uint32_t piece_index = (i * 8) + (7 - bit);
-                    auto block = _getNextBlockForPiece(piece_index);
-                    if (block) {
-                        return block;
-                    }
-                }
-            }
+    for (uint32_t pieceIndex = 0; pieceIndex < totalPieces; ++pieceIndex) {
+        if (_finished[pieceIndex]) {
+            continue;
+        }
+
+        int byteIndex = pieceIndex / 8;
+        int bitIndex = pieceIndex % 8;
+        if (byteIndex >= static_cast<int>(peer_bitfield.size())) {
+            continue;
+        }
+
+        bool peerHasPiece = ((peer_bitfield[byteIndex] >> (7 - bitIndex)) & 1) != 0;
+        if (!peerHasPiece) {
+            continue;
+        }
+
+        candidates.push_back(pieceIndex);
+    }
+
+    if (candidates.empty()) {
+        return std::nullopt;
+    }
+
+    std::sort(candidates.begin(), candidates.end(), [this](uint32_t a, uint32_t b) {
+        int availabilityA = _pieceAvailability[a];
+        int availabilityB = _pieceAvailability[b];
+        if (availabilityA != availabilityB) {
+            return availabilityA < availabilityB;
+        }
+        bool aInProgress = _pendingPieces.contains(a);
+        bool bInProgress = _pendingPieces.contains(b);
+        if (aInProgress != bInProgress) {
+            return !aInProgress;
+        }
+        return a < b;
+    });
+
+    for (uint32_t pieceIndex : candidates) {
+        auto block = _getNextBlockForPiece(pieceIndex);
+        if (block) {
+            return block;
         }
     }
 
-    // Peer has nothing we want
     return std::nullopt;
 }
 
@@ -130,6 +160,56 @@ bool PieceManager::_verifyHash(uint32_t index, std::span<uint8_t> data) const {
 
 bool PieceManager::isComplete() {
     return _piecesFinished >= _metadata.info.pieceHashes.size();
+}
+
+void PieceManager::registerPeerBitfield(size_t peerKey, const std::vector<uint8_t>& peerBitfield) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (auto it = _peerBitfields.find(peerKey); it != _peerBitfields.end()) {
+        _updateAvailability(it->second, -1);
+        it->second = peerBitfield;
+        _updateAvailability(peerBitfield, 1);
+        return;
+    }
+
+    _peerBitfields.emplace(peerKey, peerBitfield);
+    _updateAvailability(peerBitfield, 1);
+}
+
+void PieceManager::updatePeerBitfield(size_t peerKey, const std::vector<uint8_t>& peerBitfield) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (auto it = _peerBitfields.find(peerKey); it != _peerBitfields.end()) {
+        _updateAvailability(it->second, -1);
+        it->second = peerBitfield;
+        _updateAvailability(peerBitfield, 1);
+        return;
+    }
+
+    _peerBitfields.emplace(peerKey, peerBitfield);
+    _updateAvailability(peerBitfield, 1);
+}
+
+void PieceManager::unregisterPeerBitfield(size_t peerKey) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (auto it = _peerBitfields.find(peerKey); it != _peerBitfields.end()) {
+        _updateAvailability(it->second, -1);
+        _peerBitfields.erase(it);
+    }
+}
+
+void PieceManager::_updateAvailability(const std::vector<uint8_t>& bitfield, int delta) {
+    size_t totalPieces = _metadata.info.pieceHashes.size();
+    for (uint32_t pieceIndex = 0; pieceIndex < totalPieces; ++pieceIndex) {
+        int byteIndex = pieceIndex / 8;
+        int bitIndex = pieceIndex % 8;
+        if (byteIndex >= static_cast<int>(bitfield.size())) {
+            break;
+        }
+
+        bool peerHasPiece = ((bitfield[byteIndex] >> (7 - bitIndex)) & 1) != 0;
+        if (peerHasPiece) {
+            _pieceAvailability[pieceIndex] += delta;
+        }
+    }
 }
 
 std::optional<Block> PieceManager::_getNextBlockForPiece(uint32_t index) {

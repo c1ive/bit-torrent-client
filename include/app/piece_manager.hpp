@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <map>
 #include <mutex>
 #include <openssl/sha.h>
 #include <optional>
@@ -49,6 +50,10 @@ public:
     bool returnBlock(const Block& block);
     bool isComplete();
 
+    void registerPeerBitfield(size_t peerKey, const std::vector<uint8_t>& peerBitfield);
+    void updatePeerBitfield(size_t peerKey, const std::vector<uint8_t>& peerBitfield);
+    void unregisterPeerBitfield(size_t peerKey);
+
     inline int getTotalNumOfPieces() const {
         return _metadata.info.pieceHashes.size();
     };
@@ -68,12 +73,17 @@ private:
     std::vector<bool> _finished;
     int _piecesFinished;
 
+    // Availability tracking
+    std::map<size_t, std::vector<uint8_t>> _peerBitfields;
+    std::vector<int> _pieceAvailability;
+
     // Blocks
     std::set<Block> _pendingBlocks;
     std::vector<uint32_t> _nextOffsets;
 
     // Helpers
     std::optional<Block> _getNextBlockForPiece(uint32_t index);
+    void _updateAvailability(const std::vector<uint8_t>& bitfield, int delta);
     size_t _getPieceLength(uint32_t index) const;
     bool _verifyHash(uint32_t index, std::span<uint8_t> data) const;
 

@@ -39,6 +39,9 @@ private:
     bool _am_interested = false;   // We want data from the peer
     bool _peer_choking = true;     // Peer is choking us (default)
     bool _peer_interested = false; // Peer wants data from us
+    size_t _peerKey;
+    int _messagesWithoutProgress = 0;
+    int _keepAliveCount = 0;
     PeerState _state;
     asio::ip::tcp::socket _socket;
     std::shared_ptr<PieceManager> _pieceManager;
