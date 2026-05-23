@@ -11,7 +11,7 @@ public:
     void notifyProgress();
 
 private:
-    void _logProgress();
+    void _logProgress() const;
 
     int _totalPieces;
     int _frequency;

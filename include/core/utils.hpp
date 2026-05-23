@@ -22,7 +22,6 @@ public:
     explicit ByteReader(std::span<const uint8_t> buffer);
 
     uint32_t readU32();
-    uint8_t readU8();
     std::span<const uint8_t> readRemaining();
 
     static std::string sha256sum(const std::filesystem::path& path);

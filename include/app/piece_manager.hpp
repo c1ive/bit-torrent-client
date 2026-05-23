@@ -27,7 +27,7 @@ struct PendingPiece {
     size_t blocksReceived = 0;
     size_t totalBlocksNeeded;
 
-    inline bool isFinished() {
+    inline bool isFinished() const {
         return blocksReceived == totalBlocksNeeded;
     }
 };
@@ -82,8 +82,6 @@ private:
     std::optional<Block> _getNextBlockForPiece(uint32_t index);
     size_t _getPieceLength(uint32_t index) const;
     bool _verifyHash(uint32_t index, std::span<uint8_t> data) const;
-
-    bool _hasPiece(uint32_t index) const;
     void _setPiece(uint32_t index);
 };
 } // namespace bt

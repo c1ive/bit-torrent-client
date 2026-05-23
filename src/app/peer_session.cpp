@@ -14,7 +14,7 @@ namespace bt {
 constexpr int MAX_PIPELINE_SIZE = 32;
 
 PeerSession::PeerSession(asio::io_context& io_context, std::shared_ptr<PieceManager> pieceManager)
-    : _socket(io_context), _pieceManager(pieceManager), _state(PeerState::CONNECTING) {}
+    : _state(PeerState::CONNECTING), _socket(io_context), _pieceManager(pieceManager) {}
 
 asio::awaitable<uint32_t> PeerSession::_readMsgLen() {
     uint32_t network_len = 0;
@@ -136,6 +136,7 @@ asio::awaitable<void> PeerSession::_handleMessage(core::msg::id msg_id,
         spdlog::debug("Received unknown or unhandled message ID: {}", static_cast<uint8_t>(msg_id));
         break;
     }
+    co_return;
 }
 
 asio::awaitable<void> PeerSession::run() {

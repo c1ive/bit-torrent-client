@@ -47,7 +47,7 @@ void ProgressTracker::notifyProgress() {
     ++_finishedPieces;
 }
 
-void ProgressTracker::_logProgress() {
+void ProgressTracker::_logProgress() const {
     double progress = static_cast<double>(_finishedPieces) / _totalPieces;
     double percent = progress * 100.0;
 

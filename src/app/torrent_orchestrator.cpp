@@ -11,8 +11,8 @@ using namespace bt;
 
 TorrentOrchestrator::TorrentOrchestrator(std::string path, std::filesystem::path outputPath,
                                          bool logging, std::string expectedSha256)
-    : _logging(logging), _metadata(core::parseTorrentData(path)),
-      _outputPath(std::move(outputPath)), _expectedSha256(std::move(expectedSha256)) {};
+    : _metadata(core::parseTorrentData(path)), _outputPath(std::move(outputPath)),
+      _logging(logging), _expectedSha256(std::move(expectedSha256)) {};
 
 void TorrentOrchestrator::download() {
     // TODO: Move to peer manager

@@ -1,25 +1,25 @@
 #include "app/piece_manager.hpp"
 #include "app/progress_tracker.hpp"
 #include "core/torrent_metadata_loader.hpp"
-#include "spdlog/spdlog.h"
 #include <algorithm>
 #include <cstdint>
 #include <mutex>
 #include <openssl/sha.h>
 #include <optional>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 namespace bt {
 PieceManager::PieceManager(core::TorrentMetadata metadata, std::condition_variable& cv,
                            std::unique_ptr<bt::ProgressTracker> progressTracker,
                            std::filesystem::path outputPath, std::mutex& completionMutex)
-    : _metadata(metadata), _verificationHashes(_metadata.info.pieceHashes),
-      _nextOffsets(_metadata.info.pieceHashes.size(), 0),
-      _finished(_metadata.info.pieceHashes.size(), false),
-      _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
+    : _completionCV(cv), _completionMutex(completionMutex),
+      _progressTracker(std::move(progressTracker)),
       _fileHandler(std::move(outputPath), metadata.info.pieceLength, metadata.info.pieceLength),
-      _completionCV(cv), _completionMutex(completionMutex), _piecesFinished(0),
-      _progressTracker(std::move(progressTracker)) {
+      _metadata(metadata), _bitfield((_metadata.info.pieceHashes.size() + 7) / 8, 0),
+      _verificationHashes(_metadata.info.pieceHashes),
+      _finished(_metadata.info.pieceHashes.size(), false), _piecesFinished(0),
+      _nextOffsets(_metadata.info.pieceHashes.size(), 0) {
     spdlog::debug("PieceManager initialized for {} pieces ({} bytes bitfield)",
                   _metadata.info.pieceHashes.size(), _bitfield.size());
 }
@@ -194,12 +194,6 @@ size_t PieceManager::_getPieceLength(uint32_t index) const {
     }
 
     return pieceLength;
-}
-
-bool PieceManager::_hasPiece(uint32_t index) const {
-    int byteIndex = index / 8;
-    int offset = index % 8;
-    return (_bitfield[byteIndex] >> (7 - offset) & 1) != 0;
 }
 
 void PieceManager::_setPiece(uint32_t index) {

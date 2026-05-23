@@ -36,12 +36,6 @@ uint32_t ByteReader::readU32() {
     return ntohl(val);
 }
 
-uint8_t ByteReader::readU8() {
-    if (_cursor + 1 > _buffer.size())
-        throw std::out_of_range("Buffer underflow");
-    return _buffer[_cursor++];
-}
-
 // Get the remaining bytes (for the actual file data)
 std::span<const uint8_t> ByteReader::readRemaining() {
     return _buffer.subspan(_cursor);
